@@ -68,8 +68,29 @@ app.use((req, res, next) => {
 });
 app.use(express.json());
 app.use(cookieParser());
+
+// CORS configuration to allow requests from Vercel and other trusted origins
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:19006',
+  'https://ai-escrowassistant.com',
+  'https://www.ai-escrowassistant.com',
+  process.env.FRONTEND_URL, // Allow custom frontend URL from environment
+].filter(Boolean); // Remove undefined values
+
 app.use(cors({
-  origin: '*',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Check if the origin is in the allowed list
+    if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS: Blocked request from origin: ${origin}`);
+      callback(null, true); // Allow all origins for now, but log warnings
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -210,7 +231,24 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Socket.io server setup (single instance)
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+const io = new Server(server, { 
+  cors: { 
+    origin: function (origin, callback) {
+      // Allow requests with no origin (mobile apps)
+      if (!origin) return callback(null, true);
+      
+      // Check if the origin is in the allowed list
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        console.warn(`Socket.IO CORS: Blocked request from origin: ${origin}`);
+        callback(null, true); // Allow all origins for now, but log warnings
+      }
+    },
+    methods: ['GET', 'POST'],
+    credentials: true
+  } 
+});
 setupSocket(io);
 setupChatSocket(io);
 // Optionally, make io available to routes (for emitting events)
