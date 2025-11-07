@@ -1,0 +1,242 @@
+/* ===============================
+   Chat Layout (Escrow Assistant)
+   =============================== */
+.chat-container {
+  display: flex;
+  height: 100vh;
+  font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+  background: #f4f6fa;
+  color: #23395d;
+  overflow: hidden;
+}
+
+/* Sidebar ====================== */
+.chat-sidebar {
+  width: 320px;
+  background: #23395d;
+  color: #fff;
+  border-right: 1px solid #1b2d4a;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-sidebar-header {
+  padding: 20px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  background: #1b2d4a;
+  border-bottom: 1px solid #2d4773;
+}
+
+.chat-room-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.chat-room {
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.chat-room:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.chat-room.active {
+  background: #4B7BEC;
+  font-weight: 600;
+}
+
+/* Main Chat ==================== */
+.chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #f4f6fa;
+}
+
+/* Header */
+.chat-header {
+  padding: 16px 24px;
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chat-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chat-user-email {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #23395d;
+}
+
+.chat-agent {
+  font-size: 0.9rem;
+  color: #4B7BEC;
+}
+
+/* Messages Area */
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px 120px 24px;
+  background: #f4f6fa;
+}
+
+.chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+.chat-messages::-webkit-scrollbar-thumb {
+  background: #bfc9d9;
+  border-radius: 3px;
+}
+
+/* Bubbles */
+.chat-bubble {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(35,57,93,0.08);
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  max-width: 600px;
+  position: relative;
+  word-wrap: break-word;
+}
+
+.chat-bubble.user {
+  border-left: 4px solid #4B7BEC;
+  align-self: flex-end;
+}
+
+.chat-bubble.agent {
+  background: #eaf3ff;
+  border-left: 4px solid #23395d;
+  align-self: flex-start;
+}
+
+/* Bubble header */
+.chat-bubble-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.chat-bubble-sender {
+  font-weight: 600;
+  color: #23395d;
+}
+
+.chat-bubble-sender.agent {
+  color: #4B7BEC;
+}
+
+.chat-bubble-time {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+/* Text */
+.chat-bubble-text {
+  font-size: 1rem;
+  color: #222;
+  margin-bottom: 4px;
+}
+
+.chat-bubble-text.agent {
+  color: #23395d;
+}
+
+/* File / Image preview */
+.chat-bubble-file {
+  margin-top: 8px;
+}
+
+.chat-bubble-file img {
+  max-width: 180px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  cursor: pointer;
+}
+
+.chat-bubble-file a {
+  color: #4B7BEC;
+  text-decoration: underline;
+  font-size: 0.9rem;
+}
+
+/* Input area ================== */
+.chat-reply-row {
+  position: absolute;
+  bottom: 0;
+  left: 320px; /* sidebar width */
+  right: 0;
+  background: #fff;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  gap: 8px;
+}
+
+.chat-reply-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #bfc9d9;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.chat-reply-btn,
+.chat-upload-btn {
+  background: #4B7BEC;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.chat-reply-btn:hover,
+.chat-upload-btn:hover {
+  background: #3a66d8;
+}
+
+.chat-reply-btn:disabled {
+  background: #bfc9d9;
+  cursor: not-allowed;
+}
+
+.chat-upload-btn {
+  background: #23395d;
+}
+
+/* Empty / Loading states ====== */
+.chat-loading, .chat-error, .chat-empty {
+  color: #888;
+  text-align: center;
+  margin-top: 40px;
+  font-size: 1rem;
+}
+
+/* Responsive ================== */
+@media (max-width: 768px) {
+  .chat-sidebar {
+    display: none;
+  }
+  .chat-reply-row {
+    left: 0;
+  }
+}

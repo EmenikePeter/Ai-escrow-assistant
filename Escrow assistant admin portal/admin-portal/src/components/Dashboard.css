@@ -1,0 +1,31 @@
+.dashboard-container {
+  padding: 32px;
+  background: #f7f9fc;
+  min-height: 100vh;
+}
+.dashboard-container h1 {
+  font-size: 2.5rem;
+  margin-bottom: 32px;
+  color: #2d3a4b;
+}
+.dashboard-widgets {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.widget {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  padding: 24px;
+  min-width: 220px;
+  flex: 1;
+}
+.widget h2 {
+  font-size: 1.3rem;
+  margin-bottom: 12px;
+  color: #4B7BEC;
+}
+.widget p {
+  color: #555;
+}
