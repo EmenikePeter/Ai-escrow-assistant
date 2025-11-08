@@ -498,7 +498,10 @@ app.post('/review-legal', async (req, res) => {
 // Signup route
 app.post('/api/signup', async (req, res) => {
   try {
-  const { name, email, password, phone, country, stateProvince, address, paymentMethod, dob, userType, skills, business } = req.body;
+    const { name, email, password, phone, country, stateProvince, address, paymentMethod, dob, userType, skills, business } = req.body;
+    if (!password || typeof password !== 'string') {
+      return res.status(400).json({ message: 'Password is required and must be a string.' });
+    }
     const existing = await User.findOne({ email });
     if (existing) {
       return res.status(400).json({ message: 'Email already registered.' });
