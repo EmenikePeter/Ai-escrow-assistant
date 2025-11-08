@@ -4,6 +4,7 @@
     "API_BASE_URL": "https://escroassistant.com"
   },
   "rewrites": [
+    { "source": "/api/(.*)", "destination": "http://3.211.217.228:4000/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
