@@ -403,7 +403,7 @@ export default function ChatScreen({ route, navigation }) {
         // ignore audio stop errors
       }
 
-      console.log('[ChatScreen] Attempting socket connection to:', API_BASE_URL);
+  console.log('[ChatScreen] Attempting socket connection to:', API_BASE_URL);
       // Use API_BASE_URL from .env for socket connection
       socketRef.current = io(API_BASE_URL, {
         query: socketQuery,
