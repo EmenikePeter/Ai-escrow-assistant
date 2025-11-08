@@ -77,9 +77,12 @@ const allowedOrigins = [
   'https://www.ai-escrowassistant.com',
   'https://ai-escroassistant.com',
   'https://www.ai-escroassistant.com',
+  'https://escroassistant.com',
+  'https://www.escroassistant.com',
   'https://ai-escrow-assistant-2d8ot3j4r-anekwe-emenike-peter-s-projects.vercel.app', // Vercel preview
   process.env.FRONTEND_URL,
   process.env.ADMIN_FRONTEND_URL,
+  process.env.EXTRA_FRONTEND_URL,
 ].filter(Boolean); // Remove undefined values
 
 const isOriginAllowed = (origin) => {
