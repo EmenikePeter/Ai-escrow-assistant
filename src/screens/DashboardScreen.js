@@ -1,6 +1,6 @@
-import { API_BASE_URL } from '@env';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { API_BASE_URL } from '../config/env';
 import { useUser } from '../context/UserContext';
 import { getWithAuth } from '../utils/api';
 

@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '@env';
+import { API_BASE_URL } from '../config/env';
 
 // Utility to fetch agent full name by email
 export async function fetchAgentName(agentEmail) {

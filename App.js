@@ -1,4 +1,3 @@
-import { API_BASE_URL } from '@env';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
@@ -13,6 +12,7 @@ import { Alert, Button, Text, TextInput, TouchableOpacity, View } from 'react-na
 import CalendarPicker from 'react-native-calendar-picker';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import Modal from 'react-native-modal';
+import { API_BASE_URL } from './src/config/env';
 import { UserProvider } from './src/context/UserContext';
 import ChatHistoryDetailScreen from './src/screens/ChatHistoryDetailScreen';
 import ContractScreen from './src/screens/ContractScreen';
