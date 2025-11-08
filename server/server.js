@@ -86,7 +86,7 @@ const allowedOrigins = [
 ].filter(Boolean); // Remove undefined values
 
 const dynamicOriginPatterns = [
-  /^https:\/\/ai-escrow-assistant-[\w-]+\.[\w-]+\.vercel\.app$/,
+  /^https:\/\/ai-escrow-assistant-[\w-]+\.vercel\.app$/,
 ];
 
 if (process.env.EXTRA_ORIGIN_REGEX) {

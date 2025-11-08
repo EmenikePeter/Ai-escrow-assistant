@@ -1,88 +1,94 @@
-# AI Escrow Assistant 👋
+# AI Escrow Assistant
 
-This is an [Expo](https://expo.dev) project for an AI-powered escrow assistant application with a backend server and admin portal.
+**Secure, Smart, and Simple Transactions – Powered by AI.**
 
-## Project Structure
+"AI Escrow Assistant is your intelligent partner for secure online transactions. Using advanced AI, our app ensures that payments are safely held until all parties fulfill their commitments, eliminating fraud and disputes. Whether you’re buying, selling, or freelancing, AI Escrow Assistant provides a fast, reliable, and transparent escrow experience — all from your mobile device."
 
-- **Root**: React Native mobile app (Expo)
-- **server/**: Node.js backend server with Express and Socket.IO
-- **Escrow assistant admin portal/admin-portal/**: React admin dashboard
+## Key Selling Points
 
-## Get started
+- **AI-Powered Security:** Smart monitoring of transactions to prevent fraud.
+- **Trusted Escrow:** Payments are only released when both parties fulfill their agreement.
+- **Fast & Simple:** Easy-to-use interface for sending and receiving payments.
+- **Cross-Platform:** Works seamlessly for freelancers, buyers, and sellers.
+- **Transparent Process:** Real-time updates on payment status and milestones.
+- **Global Reach:** Supports multiple currencies and online marketplaces.
 
-1. Install dependencies
+### Optional Taglines for Ads or Social Media
 
-   ```bash
-   npm install
-   ```
+- "Your smart, AI-powered shield for safe online payments."
+- "Trust every transaction. Let AI handle the risk."
 
-2. Configure environment variables
+# AI Escrow Assistant
 
-   ```bash
-   cp .env.example .env
-   ```
+**Secure, Smart, and Simple Transactions – Powered by AI.**
 
-   Edit `.env` and set your API base URL and other configuration values.
+AI Escrow Assistant is your intelligent partner for trusted online transactions. Using advanced AI, the platform safeguards payments until every party fulfills their commitments, dramatically reducing fraud and disputes. Whether you are buying, selling, or freelancing, AI Escrow Assistant delivers a fast, reliable, and transparent escrow experience from any device.
 
-3. Start the backend server
+## Why People Choose It
 
-   ```bash
-   cd server
-   node server.js
-   ```
+- **AI-Powered Security** – Continuous monitoring flags suspicious activity before it becomes a problem.
+- **Trusted Escrow** – Funds stay locked until contractual milestones are approved by both sides.
+- **Fast & Simple** – Intuitive flows for sending, receiving, and reconciling payments.
+- **Cross-Platform** – Built for freelancers, contractors, buyers, sellers, and support teams.
+- **Transparent Process** – Real-time updates on status, chat history, and deliverables.
+- **Global Reach** – Supports multi-currency engagements and distributed teams.
 
-4. Start the mobile app
+### Optional Taglines for Campaigns
 
-   ```bash
-   npx expo start
-   ```
+- *"Your smart, AI-powered shield for safe online payments."*
+- *"Trust every transaction. Let AI handle the risk."*
 
-In the output, you'll find options to open the app in a
+"AI Escrow Assistant is your intelligent partner for secure online transactions. Our AI-powered escrow system ensures that payments are safely held until all parties meet their commitments, eliminating the risk of fraud and disputes. Whether you’re a freelancer, buyer, or seller, you can transact with confidence and transparency."
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Features:
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+- AI-Powered Security: Smart monitoring of transactions to prevent fraud.
+- Trusted Escrow System: Payments are only released when agreements are fulfilled.
+- Fast & Easy: Seamless, intuitive interface for sending and receiving payments.
+- Real-Time Updates: Track payment milestones instantly.
+- Global Payments: Supports multiple currencies and online marketplaces.
 
-## Deployment
+"Experience the smarter, safer way to transact online."
 
-For production deployment instructions (Vercel frontend + AWS EC2 backend), see [DEPLOYMENT.md](./DEPLOYMENT.md).
+"Secure online payments made simple. AI Escrow Assistant ensures every transaction is safe, fast, and transparent."
 
-### Quick Deployment Setup
 
-1. **Frontend (Vercel)**:
-   - Set `API_BASE_URL` environment variable to your backend URL
-   - Set `EXPO_PUBLIC_API_BASE_URL` for web builds
-   
-2. **Backend (AWS EC2)**:
-   - Configure `.env` file with production values
-   - Set `FRONTEND_URL` to your Vercel domain
-   - Ensure ports 80, 443, and 4000 are open
+- Stop worrying about online payments. Let AI Escrow Assistant hold your funds safely until the deal is done!
+- Freelancer? Seller? Buyer? Protect your money with AI-powered escrow. Safe. Smart. Simple.
+- Trust every transaction. AI Escrow Assistant ensures your payments are secure, every step of the way.
 
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed instructions.
 
-## Get a fresh project
+- Your AI-powered shield for safe transactions.
+- Trust every deal. Leave the risk to AI.
+- Smart. Secure. Simple. Escrow, reimagined.
 
-When you're ready, run:
+---
 
-```bash
-npm run reset-project
-```
+## Platform Overview
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+AI Escrow Assistant is a full-stack marketplace platform that protects digital contracts, milestones, and cross-border transactions with an AI-guided workflow. The product spans a mobile experience (Expo), a secure Express backend, and an operational admin portal, all designed to help independent professionals and businesses work together with confidence.
 
-## Learn more
+### What the Platform Provides
 
-To learn more about developing your project with Expo, look at the following resources:
+- Smart onboarding for contractors, freelancers, buyers, and sellers
+- Contract creation with AI-assisted clauses and dispute prevention prompts
+- Escrow-backed milestone payments and automated payout handling
+- Real-time chat, file sharing, and admin-supervised support rooms
+- Inline AI summaries, dispute clause suggestions, and legal review tooling
+- Audit trails, role-based access, and dedicated admin dashboards for compliance
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### Experience for Contractors and Freelancers
 
-## Join the community
+- **Secure work acquisition** – Invite clients or respond to buyer requests with AI-curated scopes.
+- **Contract generation** – Build agreements with reusable templates and AI-generated clauses.
+- **Milestone tracking** – Attach deliverables, set due dates, and monitor approval status.
+- **Collaborative chat** – Share files, voice notes, and receive AI summaries in context.
+- **Payout certainty** – Funds release automatically once milestones are approved.
 
-Join our community of developers creating universal apps.
+### Experience for Buyers and Business Teams
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- **Confidence in delivery** – Escrow-backed payments ensure work is completed before funds move.
+- **Role-based oversight** – Finance, legal, and project managers track engagements in real time.
+- **Risk mitigation** – Activity logs and mediation tools support compliance and dispute resolution.
+- **Insightful analytics** – Dashboards surface spending trends and vendor performance.
+
