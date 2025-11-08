@@ -135,7 +135,8 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+// Handle preflight for any path using regex (Express 5 compatible)
+app.options(/.*/, cors(corsOptions));
 
 // Admin/Team Login Route (for admin portal)
 app.post('/api/auth/login', async (req, res) => {
