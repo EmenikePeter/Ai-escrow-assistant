@@ -38,7 +38,32 @@ const sanitizeApiBaseUrl = (value) => {
   }
 };
 
-const sanitizedApiBaseUrl = sanitizeApiBaseUrl(resolvedApiBaseUrl);
+const FALLBACK_API_BASE_URL = 'https://ec2-3-211-217-228.compute-1.amazonaws.com:4000';
+
+const sanitizedEnvValue = sanitizeApiBaseUrl(resolvedApiBaseUrl);
+
+let sanitizedApiBaseUrl = sanitizedEnvValue;
+if (!sanitizedApiBaseUrl) {
+  sanitizedApiBaseUrl = FALLBACK_API_BASE_URL;
+} else {
+  try {
+    const { hostname } = new URL(sanitizedApiBaseUrl);
+    if (/ai-escrowassistant\.com$/i.test(hostname)) {
+      console.warn(
+        '[env] Detected deprecated API_BASE_URL host. Overriding to EC2 endpoint:',
+        sanitizedApiBaseUrl,
+        '->',
+        FALLBACK_API_BASE_URL
+      );
+      sanitizedApiBaseUrl = FALLBACK_API_BASE_URL;
+    }
+  } catch (error) {
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
+      console.warn('[env] Failed to read API_BASE_URL hostname, falling back:', sanitizedApiBaseUrl, error);
+    }
+    sanitizedApiBaseUrl = FALLBACK_API_BASE_URL;
+  }
+}
 
 if (!sanitizedApiBaseUrl) {
   const message =
@@ -60,3 +85,13 @@ if (sanitizedApiBaseUrl !== resolvedApiBaseUrl) {
 }
 
 export const API_BASE_URL = sanitizedApiBaseUrl;
+export const API_URL = sanitizedApiBaseUrl;
+export const SOCKET_URL = (() => {
+  try {
+    const socketUrl = new URL(sanitizedApiBaseUrl);
+    socketUrl.protocol = socketUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+    return socketUrl.toString().replace(/\/$/, '');
+  } catch (_error) {
+    return 'wss://ec2-3-211-217-228.compute-1.amazonaws.com:4000';
+  }
+})();

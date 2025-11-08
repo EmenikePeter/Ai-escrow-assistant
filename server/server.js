@@ -75,26 +75,43 @@ const allowedOrigins = [
   'http://localhost:19006',
   'https://ai-escrowassistant.com',
   'https://www.ai-escrowassistant.com',
-  process.env.FRONTEND_URL, // Allow custom frontend URL from environment
+  'https://ai-escroassistant.com',
+  'https://www.ai-escroassistant.com',
+  'https://ai-escrow-assistant-2d8ot3j4r-anekwe-emenike-peter-s-projects.vercel.app', // Vercel preview
+  process.env.FRONTEND_URL,
+  process.env.ADMIN_FRONTEND_URL,
 ].filter(Boolean); // Remove undefined values
 
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
-    
-    // Check if the origin is in the allowed list
-    if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
-      callback(null, true);
-    } else {
-      console.warn(`CORS: Blocked request from origin: ${origin}`);
-      callback(null, true); // Allow all origins for now, but log warnings
+const isOriginAllowed = (origin) => {
+  if (!origin) {
+    return true;
+  }
+
+  if (allowedOrigins.includes(origin)) {
+    return true;
+  }
+
+  try {
+    const normalizedOrigin = new URL(origin).origin;
+    return allowedOrigins.includes(normalizedOrigin);
+  } catch (_error) {
+    return false;
+  }
+};
+
+const corsOptions = {
+  origin(origin, callback) {
+    if (isOriginAllowed(origin)) {
+      return callback(null, true);
     }
+    console.warn(`[CORS] Blocked request from origin: ${origin}`);
+    return callback(null, false);
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 // Admin/Team Login Route (for admin portal)
 app.post('/api/auth/login', async (req, res) => {
@@ -231,23 +248,18 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Socket.io server setup (single instance)
 const server = http.createServer(app);
-const io = new Server(server, { 
-  cors: { 
-    origin: function (origin, callback) {
-      // Allow requests with no origin (mobile apps)
-      if (!origin) return callback(null, true);
-      
-      // Check if the origin is in the allowed list
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        console.warn(`Socket.IO CORS: Blocked request from origin: ${origin}`);
-        callback(null, true); // Allow all origins for now, but log warnings
+const io = new Server(server, {
+  cors: {
+    origin(origin, callback) {
+      if (isOriginAllowed(origin)) {
+        return callback(null, true);
       }
+      console.warn(`[Socket.IO] Blocked request from origin: ${origin}`);
+      return callback(null, false);
     },
     methods: ['GET', 'POST'],
-    credentials: true
-  } 
+    credentials: true,
+  },
 });
 setupSocket(io);
 setupChatSocket(io);
