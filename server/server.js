@@ -79,11 +79,25 @@ const allowedOrigins = [
   'https://www.ai-escroassistant.com',
   'https://escroassistant.com',
   'https://www.escroassistant.com',
-  'https://ai-escrow-assistant-2d8ot3j4r-anekwe-emenike-peter-s-projects.vercel.app', // Vercel preview
+  'https://ai-escrow-assistant.vercel.app',
   process.env.FRONTEND_URL,
   process.env.ADMIN_FRONTEND_URL,
   process.env.EXTRA_FRONTEND_URL,
 ].filter(Boolean); // Remove undefined values
+
+const dynamicOriginPatterns = [
+  /^https:\/\/ai-escrow-assistant-[\w-]+\.anekwe-emenike-peter-s-projects\.vercel\.app$/,
+];
+
+if (process.env.EXTRA_ORIGIN_REGEX) {
+  try {
+    dynamicOriginPatterns.push(new RegExp(process.env.EXTRA_ORIGIN_REGEX));
+  } catch (error) {
+    console.error('[CORS] Failed to compile EXTRA_ORIGIN_REGEX:', error?.message || error);
+  }
+}
+
+const matchesDynamicOrigin = (origin) => dynamicOriginPatterns.some((pattern) => pattern.test(origin));
 
 const isOriginAllowed = (origin) => {
   if (!origin) {
@@ -94,9 +108,16 @@ const isOriginAllowed = (origin) => {
     return true;
   }
 
+  if (matchesDynamicOrigin(origin)) {
+    return true;
+  }
+
   try {
     const normalizedOrigin = new URL(origin).origin;
-    return allowedOrigins.includes(normalizedOrigin);
+    if (allowedOrigins.includes(normalizedOrigin)) {
+      return true;
+    }
+    return matchesDynamicOrigin(normalizedOrigin);
   } catch (_error) {
     return false;
   }
