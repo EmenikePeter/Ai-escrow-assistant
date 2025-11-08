@@ -1,5 +1,5 @@
-import { API_BASE_URL } from '@env';
 import axios from 'axios';
+import { API_BASE_URL } from '../config/env';
 
 export async function fetchTeamMembers() {
   const res = await axios.get(`${API_BASE_URL}/api/support/team`);

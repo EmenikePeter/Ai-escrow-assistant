@@ -1,6 +1,7 @@
 import { Picker } from '@react-native-picker/picker';
 import { useState } from 'react';
 import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { API_BASE_URL } from '../config/env';
 import { useUser } from '../context/UserContext';
 import { postWithAuth } from '../utils/api';
 
@@ -43,7 +44,7 @@ export default function RecipientSignContractScreen({ route, navigation }) {
         signature,
         action: actionType,
       };
-      await postWithAuth(`${process.env.API_BASE_URL}/api/contracts/sign`, contractData);
+  await postWithAuth(`${API_BASE_URL}/api/contracts/sign`, contractData);
       Alert.alert('Success', `Contract ${actionType === 'accept' ? 'signed and sent to originator' : 'declined'}.`);
       navigation.goBack();
     } catch (err) {

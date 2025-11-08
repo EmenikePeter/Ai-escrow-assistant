@@ -1,9 +1,9 @@
-import { API_BASE_URL } from '@env';
 import { Ionicons } from '@expo/vector-icons';
 import { CardField, useConfirmPayment } from '@stripe/stripe-react-native';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { Alert, Button, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { API_BASE_URL } from '../config/env';
 import { COLORS } from '../constants/Theme';
 import { validateColor } from '../utils/colorValidator';
 import { StripeProvider } from '../utils/StripeProvider';

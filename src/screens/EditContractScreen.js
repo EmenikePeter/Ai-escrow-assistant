@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Alert, Button, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { API_BASE_URL } from '../config/env';
 import { COLORS } from '../constants/Theme';
 import { putWithAuth } from '../utils/api';
 
@@ -39,7 +40,7 @@ const EditContractScreen = ({ navigation, route }) => {
         status: 'draft', // keep as draft until sent
       };
       // PATCH/PUT to backend
-      await putWithAuth(`${process.env.API_BASE_URL}/api/contracts/${contract._id}`, updatedContract); // Use PUT for update
+  await putWithAuth(`${API_BASE_URL}/api/contracts/${contract._id}`, updatedContract); // Use PUT for update
       Alert.alert('Success', 'Contract updated!');
       navigation.goBack();
     } catch (err) {
