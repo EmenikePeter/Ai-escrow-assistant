@@ -68,6 +68,27 @@ Features:
 
 AI Escrow Assistant is a full-stack marketplace platform that protects digital contracts, milestones, and cross-border transactions with an AI-guided workflow. The product spans a mobile experience (Expo), a secure Express backend, and an operational admin portal, all designed to help independent professionals and businesses work together with confidence.
 
+### Stripe-Powered Payment Confidence
+
+In the modern digital economy, every second counts and every transaction must be trusted. AI Escrow Assistant pairs intelligent escrow orchestration with Stripe’s global payments network so money stays protected until commitments are fulfilled.
+
+#### Why Stripe Matters
+
+- **Secure by design** – Stripe tokenizes card and bank data, delivering PCI-compliant processing without exposing sensitive details to your systems.
+- **Multiple ways to pay** – Accept cards, Apple Pay, Google Pay, and regional wallets with a single integration.
+- **Global reach** – Multi-currency support and localized payment methods let teams collaborate across borders.
+- **Automated payouts** – Funds land in freelancers’ accounts the moment milestones clear, no manual steps required.
+
+#### How the Flow Works
+
+1. **Initiate** – Buyers choose products or services and lock in terms.
+2. **Secure funds** – Stripe holds the payment in escrow while AI Escrow Assistant tracks milestones.
+3. **Verify** – AI monitors deliverables and flags anomalies before they become disputes.
+4. **Release** – Once both parties sign off, Stripe disburses funds instantly to the seller or contractor.
+5. **Complete** – Everyone receives confirmations and an auditable record in real time.
+
+The result: reduced fraud, fewer disputes, and faster settlements for freelancers, agencies, and businesses alike.
+
 ### What the Platform Provides
 
 - Smart onboarding for contractors, freelancers, buyers, and sellers

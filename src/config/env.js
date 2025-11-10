@@ -39,12 +39,27 @@ const sanitizeApiBaseUrl = (value) => {
 };
 
 const FALLBACK_API_BASE_URL = 'https://api.ai-escrowassistant.com';
+const LOCAL_DEV_API_BASE_URL = 'http://localhost:4000';
 
 const sanitizedEnvValue = sanitizeApiBaseUrl(resolvedApiBaseUrl);
 
+const preferLocalApiByDefault = (() => {
+  if (runtimeEnv.EXPO_PUBLIC_FORCE_REMOTE_API === 'true') {
+    return false;
+  }
+  if (runtimeEnv.EXPO_PUBLIC_FORCE_LOCAL_API === 'true') {
+    return true;
+  }
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    return true;
+  }
+  return false;
+})();
+
 let sanitizedApiBaseUrl = sanitizedEnvValue;
 if (!sanitizedApiBaseUrl) {
-  sanitizedApiBaseUrl = FALLBACK_API_BASE_URL;
+  const fallbackTarget = preferLocalApiByDefault ? LOCAL_DEV_API_BASE_URL : FALLBACK_API_BASE_URL;
+  sanitizedApiBaseUrl = sanitizeApiBaseUrl(fallbackTarget) || fallbackTarget;
 } else {
   try {
     const { hostname } = new URL(sanitizedApiBaseUrl);
@@ -86,6 +101,10 @@ if (sanitizedApiBaseUrl !== resolvedApiBaseUrl) {
     '-> Using:',
     sanitizedApiBaseUrl
   );
+}
+
+if (preferLocalApiByDefault && sanitizedApiBaseUrl === LOCAL_DEV_API_BASE_URL) {
+  console.info('[env] Using local API_BASE_URL for development:', sanitizedApiBaseUrl);
 }
 
 export const API_BASE_URL = sanitizedApiBaseUrl;

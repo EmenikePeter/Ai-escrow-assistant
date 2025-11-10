@@ -4,7 +4,9 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import express from 'express';
+import fs from 'fs';
 import http from 'http';
+import https from 'https';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import path from 'path';
@@ -73,6 +75,7 @@ app.use(cookieParser());
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:19006',
+  'http://localhost:8081',
   'https://ai-escrowassistant.com',
   'https://www.ai-escrowassistant.com',
   'https://ai-escroassistant.com',
@@ -85,8 +88,8 @@ const allowedOrigins = [
   process.env.EXTRA_FRONTEND_URL,
 ].filter(Boolean); // Remove undefined values
 
-const dynamicOriginPatterns = [
-  /^https:\/\/ai-escrow-assistant-[\w-]+\.vercel\.app$/,
+const dynamicOriginPatterns = [,
+  /^https:\/\/ai-escrow-assistant-[a-z0-9-]+-anekwe-emenike-peter-s-projects\.vercel\.app$/,
 ];
 
 if (process.env.EXTRA_ORIGIN_REGEX) {
@@ -242,12 +245,12 @@ dotenv.config();
 // Define User schema and model
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/escrow', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('MongoDB connected'))
-.catch(err => console.error('MongoDB connection error:', err));
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/escrow')
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1); // Exit on connection failure
+  });
 
 app.use('/api/team', teamRoutes);
 app.use('/api/chat', chatUploadRoutes);
@@ -272,7 +275,30 @@ app.use('/api/history', historyRoutes);
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Socket.io server setup (single instance)
-const server = http.createServer(app);
+let server;
+let usingHttps = false;
+// Local development: always use HTTP unless SSL paths are explicitly provided and exist
+const sslKeyPath = process.env.SSL_KEY_PATH;
+const sslCertPath = process.env.SSL_CERT_PATH;
+const canLoadHttps = sslKeyPath && sslCertPath && fs.existsSync(sslKeyPath) && fs.existsSync(sslCertPath);
+
+if (canLoadHttps) {
+  try {
+    const privateKey = fs.readFileSync(sslKeyPath, 'utf8');
+    const certificate = fs.readFileSync(sslCertPath, 'utf8');
+    const credentials = { key: privateKey, cert: certificate };
+    server = https.createServer(credentials, app);
+    console.log('HTTPS server created successfully');
+    usingHttps = true;
+  } catch (error) {
+    console.error('[SSL] Failed to load certificates:', error);
+    server = http.createServer(app);
+  }
+} else {
+  console.info('[SSL] No certificate paths supplied or found. Using HTTP server for local development.');
+  server = http.createServer(app);
+}
+
 const io = new Server(server, {
   cors: {
     origin(origin, callback) {
@@ -628,7 +654,19 @@ app.post('/api/contracts/draft', async (req, res) => {
 app.use('/api', connectionRoutes);
 
 
-server.listen(4000,'0.0.0.0',() => {
+// Create HTTP server for port 80 to redirect to HTTPS
+if (usingHttps) {
+  const httpServer = http.createServer((req, res) => {
+    res.writeHead(301, { Location: `https://${req.headers.host.split(':')[0]}:4000${req.url}` });
+    res.end();
+  });
+
+  httpServer.listen(80, '0.0.0.0', () => {
+    console.log('HTTP server running on port 80 (redirecting to HTTPS)');
+  });
+}
+
+server.listen(4000, '0.0.0.0', () => {
   console.log('Server is running on port 4000 (with socket.io)');
 });
 

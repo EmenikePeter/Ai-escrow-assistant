@@ -7,10 +7,7 @@ import Contract from '../server/models/Contract.js';
 dotenv.config();
 
 async function migrate() {
-  await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/escrow', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
+  await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/escrow');
   console.log('Connected to MongoDB');
 
   const contracts = await Contract.find({ $or: [

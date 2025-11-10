@@ -19,7 +19,7 @@ const userSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema);
 
 async function createAdmin() {
-  await mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
+  await mongoose.connect(MONGODB_URI);
   const password = 'Emenike14@'; // Use your desired password
   const hash = await bcrypt.hash(password, 10);
 

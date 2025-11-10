@@ -10,10 +10,7 @@ const name = 'Admin User';
 const role = 'admin';
 
 async function createOrUpdateAdmin() {
-  await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/escrow', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
+  await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/escrow');
   let user = await User.findOne({ email });
   const hash = await bcrypt.hash(password, 10);
   if (user) {

@@ -8,10 +8,7 @@ import User from '../server/models/User.js';
 dotenv.config();
 
 async function updateContracts() {
-  await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/escrow', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
+  await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/escrow');
   const contracts = await Contract.find({});
   for (const contract of contracts) {
     let clientInfo = null;
