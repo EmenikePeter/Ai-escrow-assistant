@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect } from 'react';
 import { Button, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import BackButton from '../../components/BackButton';
 import { COLORS } from '../constants/Theme';
 import { useUser } from '../context/UserContext';
 import { validateColor } from '../utils/colorValidator';
@@ -44,6 +45,7 @@ export default function ProfileScreen({ route, navigation }) {
   }
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'white', padding: 16 }}>
+      <BackButton />
       <View style={{ alignItems: 'center', marginBottom: 24 }}>
         <Ionicons name="person-circle-outline" size={48} color={'blue'} />
         <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'blue', marginTop: 8 }}>User Profile</Text>

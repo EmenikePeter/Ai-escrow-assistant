@@ -2,6 +2,7 @@ import { API_BASE_URL } from '@env';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import BackButton from '../components/BackButton'; // Adjust the import based on your project structure
 import { useUser } from '../context/UserContext';
 import { postWithAuth } from '../utils/api';
 
@@ -196,7 +197,8 @@ export default function InboxScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1 }}>
+      <BackButton />
       <Text style={styles.header}>Inbox</Text>
 
 

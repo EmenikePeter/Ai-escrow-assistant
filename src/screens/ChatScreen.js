@@ -27,6 +27,7 @@ import {
   View
 } from 'react-native';
 import { io } from 'socket.io-client';
+import BackButton from '../components/BackButton';
 import { COLORS } from '../constants/Theme';
 import { useUser } from '../context/UserContext';
 import { getWithAuth, postWithAuth } from '../utils/api';
@@ -888,7 +889,7 @@ export default function ChatScreen({ route, navigation }) {
             </View>
           )}
           <View style={{ flex: 1 }}>
-            {/* Image, video, or audio bubble (with fallback for mediaUrl/url) */}
+            {/* Image, video, or audio bubble (with fallback for mediaUrl) */}
             {(() => {
               // Prefer fileUrl, fallback to mediaUrl or url
               let mediaUri = item.fileUrl || item.mediaUrl || item.url;
@@ -1009,7 +1010,6 @@ export default function ChatScreen({ route, navigation }) {
             <ExpoImage source={{ uri: user.avatarUrl }} style={{ width: 32, height: 32, borderRadius: 16, marginLeft: 8, backgroundColor: '#eee' }} contentFit="cover" />
           )}
         </View>
-        {/* Emoji Reaction Picker Modal */}
         {showReactionPicker && reactionTargetId === item._id && (
           <Modal visible={showReactionPicker} transparent animationType="fade">
             <View style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', alignItems: 'center' }}>
@@ -1048,6 +1048,7 @@ export default function ChatScreen({ route, navigation }) {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
       >
         <View style={{ flex: 1 }}>
+          <BackButton />
           <FlatList
             ref={flatListRef}
             data={messages}

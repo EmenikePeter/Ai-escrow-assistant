@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { useState } from 'react';
 import { Button, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import BackButton from '../../components/BackButton';
 import { useUser } from '../context/UserContext';
 
 export default function LogInScreen({ navigation }) {
@@ -36,33 +37,36 @@ export default function LogInScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Log In</Text>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-      <View style={{ width: '80%', position: 'relative', marginBottom: 12 }}>
+    <View style={{ flex: 1 }}>
+      <BackButton />
+      <View style={styles.container}>
+        <Text style={styles.title}>Log In</Text>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
         <TextInput
-          style={[styles.input, { paddingRight: 40, marginBottom: 0 }]}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={!showPassword}
+          style={styles.input}
+          placeholder="Email"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
         />
-        <TouchableOpacity
-          style={{ position: 'absolute', right: 12, top: 12 }}
-          onPress={() => setShowPassword(!showPassword)}
-        >
-          <Text style={{ fontSize: 16, color: '#4B7BEC' }}>{showPassword ? 'Hide' : 'Show'}</Text>
-        </TouchableOpacity>
+        <View style={{ width: '80%', position: 'relative', marginBottom: 12 }}>
+          <TextInput
+            style={[styles.input, { paddingRight: 40, marginBottom: 0 }]}
+            placeholder="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+          />
+          <TouchableOpacity
+            style={{ position: 'absolute', right: 12, top: 12 }}
+            onPress={() => setShowPassword(!showPassword)}
+          >
+            <Text style={{ fontSize: 16, color: '#4B7BEC' }}>{showPassword ? 'Hide' : 'Show'}</Text>
+          </TouchableOpacity>
+        </View>
+        <Button title={loading ? 'Logging in...' : 'Log In'} onPress={handleLogin} disabled={loading} />
       </View>
-      <Button title={loading ? 'Logging in...' : 'Log In'} onPress={handleLogin} disabled={loading} />
     </View>
   );
 }

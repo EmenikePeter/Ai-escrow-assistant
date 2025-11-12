@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Alert, Button, Text, TextInput, View } from 'react-native';
+import BackButton from '../../components/BackButton';
 import { COLORS } from '../constants/Theme';
 import { validateColor } from '../utils/colorValidator';
 import { generateClause } from '../utils/openAI';
@@ -84,7 +85,8 @@ export default function DisputeScreen({ route }) {
   };
 
   return (
-    <View style={{ flex: 1, padding: 16, backgroundColor: COLORS.background }}>
+    <View style={{ flex: 1 }}>
+      <BackButton />
       <View style={{ alignItems: 'center', marginBottom: 16 }}>
         <Ionicons name="alert-circle-outline" size={36} color={COLORS.error || COLORS.primary} />
         <Text style={{ fontSize: 20, fontWeight: 'bold', color: COLORS.primary, marginTop: 8 }}>Dispute</Text>

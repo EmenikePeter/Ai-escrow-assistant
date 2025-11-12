@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Button, Text, TouchableOpacity, View } from 'react-native';
+import BackButton from '../components/BackButton'; // Adjust the import based on your project structure
 import { COLORS } from '../constants/Theme';
 
 export default function DepositScreen({ route, navigation }) {
@@ -19,6 +20,7 @@ export default function DepositScreen({ route, navigation }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: 'white', padding: 16 }}>
+      <BackButton />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
         <Ionicons name="document-outline" size={36} color={'blue'} style={{ marginRight: 8 }} />
         <Text style={{ fontSize: 22, fontWeight: 'bold', color: 'blue', marginRight: 8 }}>Deposit to Escrow</Text>

@@ -1,6 +1,7 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Alert, Button, ScrollView, StyleSheet, Text, View } from 'react-native';
+import BackButton from '../../components/BackButton';
 
 export default function PrintoutScreen({ route }) {
   const { contract } = route.params;
@@ -46,41 +47,44 @@ export default function PrintoutScreen({ route }) {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Contract Printout Preview</Text>
-      <Text style={styles.label}>Title: <Text style={styles.value}>{contract.title}</Text></Text>
-      <Text style={styles.label}>Amount: <Text style={styles.value}>{contract.amount}</Text></Text>
-      <Text style={styles.label}>Description: <Text style={styles.value}>{contract.description}</Text></Text>
-      <Text style={styles.label}>Inspection Requirements: <Text style={styles.value}>{contract.inspectionRequirements}</Text></Text>
-      <Text style={styles.label}>Penalties: <Text style={styles.value}>{contract.penalties}</Text></Text>
-      <Text style={styles.label}>Milestones: <Text style={styles.value}>{contract.milestones}</Text></Text>
-      <Text style={styles.label}>Status: <Text style={styles.value}>{contract.status}</Text></Text>
-      <Text style={styles.label}>Originator: <Text style={styles.value}>{contract.originator?.name} ({contract.originator?.email})</Text></Text>
-      <Text style={styles.label}>Originator UUID: <Text style={styles.value}>{contract.originator?.uuid}</Text></Text>
-      <Text style={styles.label}>Originator Role: <Text style={styles.value}>{contract.originator?.role}</Text></Text>
-      <Text style={styles.label}>Recipient: <Text style={styles.value}>{contract.recipient?.name} ({contract.recipient?.email})</Text></Text>
-      <Text style={styles.label}>Recipient UUID: <Text style={styles.value}>{contract.recipient?.uuid}</Text></Text>
-      <Text style={styles.label}>Recipient Role: <Text style={styles.value}>{contract.signatures?.find(s => s.email === contract.recipient?.email)?.role || 'Not specified'}</Text></Text>
-      <Text style={styles.label}>Clauses:</Text>
-      {contract.clauses?.map((clause, idx) => (
-        <Text key={idx} style={{ marginLeft: 10 }}>{`• ${clause}`}</Text>
-      ))}
-      <Text style={styles.label}>Dispute Clause: <Text style={styles.value}>{contract.disputeClause}</Text></Text>
-      <Text style={styles.label}>Deadline: <Text style={styles.value}>{contract.deadline}</Text></Text>
-      <Text style={{ fontWeight: 'bold', marginTop: 16 }}>Signatures:</Text>
-      {contract.signatures?.map((sig, idx) => (
-        <View key={idx} style={{ marginLeft: 10, marginBottom: 8 }}>
-          <Text>Name: {sig.name}</Text>
-          <Text>Email: {sig.email}</Text>
-          <Text>Role: {sig.role}</Text>
-          <Text>Signature: {sig.signature}</Text>
-          <Text>Date: {new Date(sig.date).toLocaleString()}</Text>
+    <View style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <BackButton />
+        <Text style={styles.title}>Contract Printout Preview</Text>
+        <Text style={styles.label}>Title: <Text style={styles.value}>{contract.title}</Text></Text>
+        <Text style={styles.label}>Amount: <Text style={styles.value}>{contract.amount}</Text></Text>
+        <Text style={styles.label}>Description: <Text style={styles.value}>{contract.description}</Text></Text>
+        <Text style={styles.label}>Inspection Requirements: <Text style={styles.value}>{contract.inspectionRequirements}</Text></Text>
+        <Text style={styles.label}>Penalties: <Text style={styles.value}>{contract.penalties}</Text></Text>
+        <Text style={styles.label}>Milestones: <Text style={styles.value}>{contract.milestones}</Text></Text>
+        <Text style={styles.label}>Status: <Text style={styles.value}>{contract.status}</Text></Text>
+        <Text style={styles.label}>Originator: <Text style={styles.value}>{contract.originator?.name} ({contract.originator?.email})</Text></Text>
+        <Text style={styles.label}>Originator UUID: <Text style={styles.value}>{contract.originator?.uuid}</Text></Text>
+        <Text style={styles.label}>Originator Role: <Text style={styles.value}>{contract.originator?.role}</Text></Text>
+        <Text style={styles.label}>Recipient: <Text style={styles.value}>{contract.recipient?.name} ({contract.recipient?.email})</Text></Text>
+        <Text style={styles.label}>Recipient UUID: <Text style={styles.value}>{contract.recipient?.uuid}</Text></Text>
+        <Text style={styles.label}>Recipient Role: <Text style={styles.value}>{contract.signatures?.find(s => s.email === contract.recipient?.email)?.role || 'Not specified'}</Text></Text>
+        <Text style={styles.label}>Clauses:</Text>
+        {contract.clauses?.map((clause, idx) => (
+          <Text key={idx} style={{ marginLeft: 10 }}>{`• ${clause}`}</Text>
+        ))}
+        <Text style={styles.label}>Dispute Clause: <Text style={styles.value}>{contract.disputeClause}</Text></Text>
+        <Text style={styles.label}>Deadline: <Text style={styles.value}>{contract.deadline}</Text></Text>
+        <Text style={{ fontWeight: 'bold', marginTop: 16 }}>Signatures:</Text>
+        {contract.signatures?.map((sig, idx) => (
+          <View key={idx} style={{ marginLeft: 10, marginBottom: 8 }}>
+            <Text>Name: {sig.name}</Text>
+            <Text>Email: {sig.email}</Text>
+            <Text>Role: {sig.role}</Text>
+            <Text>Signature: {sig.signature}</Text>
+            <Text>Date: {new Date(sig.date).toLocaleString()}</Text>
+          </View>
+        ))}
+        <View style={{ marginVertical: 24 }}>
+          <Button title="Print / Save as PDF or Word" onPress={handlePrint} color="#4B7BEC" />
         </View>
-      ))}
-      <View style={{ marginVertical: 24 }}>
-        <Button title="Print / Save as PDF or Word" onPress={handlePrint} color="#4B7BEC" />
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 

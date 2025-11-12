@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect } from 'react';
 import { Text, View } from 'react-native';
+import BackButton from '../../components/BackButton';
 import { COLORS } from '../constants/Theme';
 import { validateColor } from '../utils/colorValidator';
 
@@ -24,7 +25,8 @@ export default function DisputeDetailScreen({ route }) {
     );
   }
   return (
-    <View style={{ flex: 1, padding: 24, backgroundColor: COLORS.background }}>
+    <View style={{ flex: 1 }}>
+      <BackButton />
       <Ionicons name="warning-outline" size={32} color={COLORS.error || '#f00'} style={{ marginBottom: 16 }} />
       <Text style={{ fontSize: 22, fontWeight: 'bold', color: COLORS.error, marginBottom: 12 }}>Dispute Details</Text>
       <Text style={{ fontSize: 16, marginBottom: 8 }}>Contract ID: {dispute.contractId}</Text>

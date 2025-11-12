@@ -2,6 +2,7 @@ import { API_BASE_URL } from '@env';
 import { Picker } from '@react-native-picker/picker';
 import { useState } from 'react';
 import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import BackButton from '../components/BackButton'; // Adjust the import based on your project structure
 import { useUser } from '../context/UserContext';
 import { postWithAuth } from '../utils/api';
 
@@ -57,6 +58,7 @@ export default function OriginatorSignContractScreen({ route, navigation }) {
 
   return (
     <View style={{ flex: 1 }}>
+      <BackButton />
       <View style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 100 }}>
           <View>

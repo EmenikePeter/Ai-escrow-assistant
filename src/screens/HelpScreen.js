@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import BackButton from '../../components/BackButton';
 import { getWithAuth, putWithAuth } from '../utils/api';
 import { sendHelpIssue } from '../utils/help';
 
@@ -24,16 +25,18 @@ export default function HelpScreen({ navigation }) {
   const [replyText, setReplyText] = useState('');
   const [replyTicketId, setReplyTicketId] = useState(null);
 
-  useState(() => {
+  useEffect(() => {
     AsyncStorage.getItem('email').then(e => e && setEmail(e));
     AsyncStorage.getItem('userId').then(id => id && setUserId(id));
-    // Fetch tickets for user
+  }, []);
+
+  useEffect(() => {
     if (userId) {
       getWithAuth(`/support/tickets?userId=${userId}`).then(res => {
         setTickets(res.data || []);
       });
     }
-  }, []);
+  }, [userId]);
 
   const handleSend = async () => {
     if (!email || !selectedCategory || !subject.trim() || !message.trim()) {
@@ -72,69 +75,72 @@ export default function HelpScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Contact Support</Text>
-      <Text style={styles.label}>Select Issue Category:</Text>
-      <Picker
-        selectedValue={selectedCategory}
-        style={styles.picker}
-        onValueChange={itemValue => setSelectedCategory(itemValue)}
-      >
-        {issueCategories.map(cat => (
-          <Picker.Item key={cat} label={cat} value={cat} />
-        ))}
-      </Picker>
-      <TextInput
-        style={styles.input}
-        placeholder="Subject"
-        value={subject}
-        onChangeText={setSubject}
-      />
-      <TextInput
-        style={styles.input}
-        multiline
-        numberOfLines={4}
-        placeholder="Describe your issue or problem..."
-        value={message}
-        onChangeText={setMessage}
-      />
-      <TouchableOpacity style={styles.button} onPress={handleSend}>
-        <Text style={styles.buttonText}>Send to Support</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={styles.liveChatButton} onPress={() => navigation.navigate('HelpLiveChat')}>
-        <Text style={styles.buttonText}>Live Chat</Text>
-      </TouchableOpacity>
-      {/* Display user's tickets */}
-      <Text style={{ fontWeight: 'bold', marginTop: 20 }}>Your Tickets:</Text>
-      {tickets.length === 0 ? (
-        <Text>No tickets found.</Text>
-      ) : (
-        tickets.map(ticket => (
-          <View key={ticket._id} style={{ backgroundColor: '#f1f1f1', borderRadius: 8, padding: 10, marginVertical: 6 }}>
-            <Text style={{ fontWeight: 'bold' }}>{ticket.subject}</Text>
-            <Text>Status: {ticket.status}</Text>
-            <Text>Category: {ticket.category}</Text>
-            <Text>Message: {ticket.message}</Text>
-            {ticket.reply && <Text style={{ color: '#4B7BEC' }}>Reply: {ticket.reply}</Text>}
-            {/* Reply input for ticket */}
-            <TextInput
-              style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 6, padding: 8, marginTop: 8 }}
-              placeholder="Reply to this ticket..."
-              value={replyTicketId === ticket._id ? replyText : ''}
-              onChangeText={text => {
-                setReplyTicketId(ticket._id);
-                setReplyText(text);
-              }}
-            />
-            <TouchableOpacity
-              style={{ backgroundColor: '#4B7BEC', padding: 8, borderRadius: 6, alignItems: 'center', marginTop: 4 }}
-              onPress={() => handleReply(ticket._id)}
-            >
-              <Text style={{ color: '#fff', fontWeight: 'bold' }}>Send Reply</Text>
-            </TouchableOpacity>
-          </View>
-        ))
-      )}
+    <View style={{ flex: 1 }}>
+      <BackButton />
+      <View style={styles.container}>
+        <Text style={styles.header}>Contact Support</Text>
+        <Text style={styles.label}>Select Issue Category:</Text>
+        <Picker
+          selectedValue={selectedCategory}
+          style={styles.picker}
+          onValueChange={itemValue => setSelectedCategory(itemValue)}
+        >
+          {issueCategories.map(cat => (
+            <Picker.Item key={cat} label={cat} value={cat} />
+          ))}
+        </Picker>
+        <TextInput
+          style={styles.input}
+          placeholder="Subject"
+          value={subject}
+          onChangeText={setSubject}
+        />
+        <TextInput
+          style={styles.input}
+          multiline
+          numberOfLines={4}
+          placeholder="Describe your issue or problem..."
+          value={message}
+          onChangeText={setMessage}
+        />
+        <TouchableOpacity style={styles.button} onPress={handleSend}>
+          <Text style={styles.buttonText}>Send to Support</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.liveChatButton} onPress={() => navigation.navigate('HelpLiveChat')}>
+          <Text style={styles.buttonText}>Live Chat</Text>
+        </TouchableOpacity>
+        {/* Display user's tickets */}
+        <Text style={{ fontWeight: 'bold', marginTop: 20 }}>Your Tickets:</Text>
+        {tickets.length === 0 ? (
+          <Text>No tickets found.</Text>
+        ) : (
+          tickets.map(ticket => (
+            <View key={ticket._id} style={{ backgroundColor: '#f1f1f1', borderRadius: 8, padding: 10, marginVertical: 6 }}>
+              <Text style={{ fontWeight: 'bold' }}>{ticket.subject}</Text>
+              <Text>Status: {ticket.status}</Text>
+              <Text>Category: {ticket.category}</Text>
+              <Text>Message: {ticket.message}</Text>
+              {ticket.reply && <Text style={{ color: '#4B7BEC' }}>Reply: {ticket.reply}</Text>}
+              {/* Reply input for ticket */}
+              <TextInput
+                style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 6, padding: 8, marginTop: 8 }}
+                placeholder="Reply to this ticket..."
+                value={replyTicketId === ticket._id ? replyText : ''}
+                onChangeText={text => {
+                  setReplyTicketId(ticket._id);
+                  setReplyText(text);
+                }}
+              />
+              <TouchableOpacity
+                style={{ backgroundColor: '#4B7BEC', padding: 8, borderRadius: 6, alignItems: 'center', marginTop: 4 }}
+                onPress={() => handleReply(ticket._id)}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Send Reply</Text>
+              </TouchableOpacity>
+            </View>
+          ))
+        )}
+      </View>
     </View>
   );
 }

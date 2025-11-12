@@ -2,6 +2,7 @@ import { API_BASE_URL } from '@env';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Button, FlatList, Text, View } from 'react-native';
+import BackButton from '../../components/BackButton';
 import { COLORS } from '../constants/Theme';
 
 // Use API_BASE_URL from .env
@@ -16,7 +17,7 @@ export default function PayoutHistoryScreen({ route, navigation }) {
     async function fetchPayouts() {
       setLoading(true);
       try {
-  const res = await axios.get(`${API_BASE_URL}/api/payouts?uuid=${userUuid}`);
+        const res = await axios.get(`${API_BASE_URL}/api/payouts?uuid=${userUuid}`);
         setPayouts(res.data.payouts || []);
       } catch (err) {
         Alert.alert('Error', err.message);
@@ -28,6 +29,7 @@ export default function PayoutHistoryScreen({ route, navigation }) {
 
   return (
     <View style={{ flex: 1, padding: 16, backgroundColor: 'white' }}>
+      <BackButton goBack={navigation.goBack} />
       <Text style={{ fontSize: 22, fontWeight: 'bold', color: COLORS.primary, marginBottom: 16 }}>Payout History</Text>
       <View style={{ flexDirection: 'row', marginVertical: 12 }}>
         <Button title="All" onPress={() => setFilter('all')} color={filter === 'all' ? 'blue' : 'gray'} />

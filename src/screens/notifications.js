@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
+import BackButton from './BackButton'; // Adjust the import based on your file structure
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -31,3 +32,12 @@ export const scheduleNotification = async (title, body, seconds) => {
     trigger: { seconds },
   });
 };
+
+export default function App() {
+  return (
+    <View style={{ flex: 1 }}>
+      <BackButton />
+      {/* ...existing screen content... */}
+    </View>
+  );
+}

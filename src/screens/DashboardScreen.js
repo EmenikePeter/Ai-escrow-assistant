@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import BackButton from '../components/BackButton';
 import { useUser } from '../context/UserContext';
 import { getWithAuth } from '../utils/api';
 
@@ -122,14 +123,17 @@ export default function DashboardScreen({ navigation }) {
   }
 
   return (
-    <View style={{ flex: 1, padding: 16 }}>
-      <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 16 }}>My Contracts</Text>
-      <FlatList
-        data={filteredContracts}
-        keyExtractor={item => item._id}
-        renderItem={renderContract}
-        ListEmptyComponent={<Text>No contracts found.</Text>}
-      />
+    <View style={{ flex: 1 }}>
+      <BackButton />
+      <View style={{ flex: 1, padding: 16 }}>
+        <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 16 }}>My Contracts</Text>
+        <FlatList
+          data={filteredContracts}
+          keyExtractor={item => item._id}
+          renderItem={renderContract}
+          ListEmptyComponent={<Text>No contracts found.</Text>}
+        />
+      </View>
     </View>
   );
 }
