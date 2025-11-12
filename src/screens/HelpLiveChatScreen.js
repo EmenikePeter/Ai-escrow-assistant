@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '@env';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
@@ -14,7 +15,6 @@ import {
     View
 } from 'react-native';
 import io from 'socket.io-client';
-import { API_BASE_URL } from '../config/env';
 import { fetchAgentName } from '../utils/fetchAgentName';
 
 const socket = io(API_BASE_URL, { transports: ['websocket'] });

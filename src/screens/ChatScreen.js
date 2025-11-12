@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '@env';
 import { useEvent } from 'expo';
 import {
   RecordingPresets,
@@ -26,7 +27,6 @@ import {
   View
 } from 'react-native';
 import { io } from 'socket.io-client';
-import { API_BASE_URL } from '../config/env';
 import { COLORS } from '../constants/Theme';
 import { useUser } from '../context/UserContext';
 import { getWithAuth, postWithAuth } from '../utils/api';
@@ -403,7 +403,7 @@ export default function ChatScreen({ route, navigation }) {
         // ignore audio stop errors
       }
 
-  console.log('[ChatScreen] Attempting socket connection to:', API_BASE_URL);
+      console.log('[ChatScreen] Attempting socket connection to http://10.10.11.43:4000');
       // Use API_BASE_URL from .env for socket connection
       socketRef.current = io(API_BASE_URL, {
         query: socketQuery,

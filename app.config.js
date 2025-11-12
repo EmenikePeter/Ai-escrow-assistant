@@ -4,8 +4,8 @@ module.exports = ({ config, ...props }) => {
   return {
     expo: {
       name: "Ai-escrow ASssistant",
-      slug: "ai-escrow-assistant",
-      owner: "emenike14",
+  slug: "ai-escrow-assistant-",
+  owner: "ai-escrow-assistant",
       version: "1.1.0",
       orientation: "portrait",
       icon: "./assets/images/escrowassistant_logo_512x512.png",
@@ -85,8 +85,8 @@ module.exports = ({ config, ...props }) => {
       },
 
       extra: {
-        router: {},
-        eas: { projectId: "401ee476-9a36-4688-9932-8038d29a3867" }
+  router: {},
+  eas: { projectId: "ec5a7bcb-f6a8-4033-8684-a0ee51decf38" }
       }
     }
   };

@@ -1,7 +1,7 @@
+import { API_BASE_URL } from '@env';
 import { Picker } from '@react-native-picker/picker';
 import { useState } from 'react';
 import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { API_BASE_URL } from '../config/env';
 import { useUser } from '../context/UserContext';
 import { postWithAuth } from '../utils/api';
 

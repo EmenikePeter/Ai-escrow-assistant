@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '@env';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
@@ -8,11 +9,10 @@ import { createStackNavigator } from '@react-navigation/stack';
 import axios from 'axios';
 import { PhoneNumberUtil } from 'google-libphonenumber';
 import { useEffect, useState } from 'react';
-import { Alert, Button, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Button, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import CalendarPicker from 'react-native-calendar-picker';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import Modal from 'react-native-modal';
-import { API_BASE_URL } from './src/config/env';
 import { UserProvider } from './src/context/UserContext';
 import ChatHistoryDetailScreen from './src/screens/ChatHistoryDetailScreen';
 import ContractScreen from './src/screens/ContractScreen';
@@ -119,18 +119,7 @@ function SignUpScreen({ navigation }) {
       const res = await axios.post(`${API_BASE_URL}/api/signup`, payload);
       await AsyncStorage.setItem('email', email); // Save email for later profile fetch
       console.log('[DEBUG] Email set in AsyncStorage (SignUp):', email);
-      setError('');
-      Alert.alert(
-        'Success',
-        res.data.message || 'Account created!',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate('Log In'),
-          },
-        ],
-        { cancelable: false }
-      );
+      Alert.alert('Success', res.data.message || 'Account created!');
       // Optionally, store token: AsyncStorage.setItem('token', res.data.token)
       // console.log('[DEBUG] Token set in AsyncStorage (SignUp):', res.data.token);
     } catch (err) {
@@ -454,23 +443,9 @@ function MainDrawer() {
 
 export default function App() {
   // ...existing code...
-  // Delay rendering on web until after client-side hydration completes.
-  const isWeb = Platform.OS === 'web';
-  const [hasHydratedWeb, setHasHydratedWeb] = useState(!isWeb);
-
-  useEffect(() => {
-    if (isWeb) {
-      setHasHydratedWeb(true);
-    }
-  }, [isWeb]);
-
   useEffect(() => {
     console.log('App component mounted');
   }, []);
-
-  if (!hasHydratedWeb) {
-    return null;
-  }
 
   return (
     <UserProvider>

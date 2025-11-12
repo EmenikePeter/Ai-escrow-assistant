@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { API_BASE_URL } from '../config/env';
 import { useUser } from '../context/UserContext';
 import { getWithAuth } from '../utils/api';
 
@@ -37,7 +36,7 @@ export default function DashboardScreen({ navigation }) {
     async function fetchContracts() {
       try {
         console.log('[DashboardScreen] Fetching contracts for user:', user.email);
-  const res = await getWithAuth(`${API_BASE_URL}/api/contracts/dashboard?email=${user.email}`);
+        const res = await getWithAuth(`${process.env.API_BASE_URL}/api/contracts/dashboard?email=${user.email}`);
         console.log('[DashboardScreen] Contracts fetched:', res.data.contracts);
         setContracts(res.data.contracts || []);
       } catch (err) {
