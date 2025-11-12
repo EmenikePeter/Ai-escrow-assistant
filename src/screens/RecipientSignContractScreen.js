@@ -1,7 +1,7 @@
 import { Picker } from '@react-native-picker/picker';
 import { useState } from 'react';
 import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import BackButton from '../components/BackButton'; // Adjust the import based on your project structure
+import BackButton from '../../components/BackButton';
 import { useUser } from '../context/UserContext';
 import { postWithAuth } from '../utils/api';
 

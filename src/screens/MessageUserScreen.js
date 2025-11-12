@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import BackButton from '../components/BackButton';
+import BackButton from '../../components/BackButton';
 import { sendMessageToUser } from '../utils/messages';
 import { fetchAllUsers } from '../utils/users';
 

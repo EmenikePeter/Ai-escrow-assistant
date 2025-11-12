@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Alert, Button, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import BackButton from '../components/BackButton';
+import BackButton from '../../components/BackButton';
 import { COLORS } from '../constants/Theme';
 import { putWithAuth } from '../utils/api';
 

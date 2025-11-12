@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import BackButton from '../components/BackButton';
+import BackButton from '../../components/BackButton';
 import { useUser } from '../context/UserContext';
 import { getWithAuth } from '../utils/api';
 

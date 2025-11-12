@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import BackButton from '../components/BackButton';
+import BackButton from '../../components/BackButton';
 import { COLORS } from '../constants/Theme';
 import { useUser } from '../context/UserContext';
 import { validateColor } from '../utils/colorValidator';

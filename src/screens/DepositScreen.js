@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Button, Text, TouchableOpacity, View } from 'react-native';
-import BackButton from '../components/BackButton'; // Adjust the import based on your project structure
+import BackButton from '../../components/BackButton';
 import { COLORS } from '../constants/Theme';
 
 export default function DepositScreen({ route, navigation }) {

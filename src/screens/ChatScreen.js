@@ -27,7 +27,7 @@ import {
   View
 } from 'react-native';
 import { io } from 'socket.io-client';
-import BackButton from '../components/BackButton';
+import BackButton from '../../components/BackButton';
 import { COLORS } from '../constants/Theme';
 import { useUser } from '../context/UserContext';
 import { getWithAuth, postWithAuth } from '../utils/api';

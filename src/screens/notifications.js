@@ -1,6 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { Platform, View } from 'react-native';
-import BackButton from './BackButton'; // Adjust the import based on your file structure
+import BackButton from '../../components/BackButton';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
