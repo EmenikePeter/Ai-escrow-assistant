@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { Button, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import BackButton from '../../components/BackButton';
 import { COLORS } from '../constants/Theme';
 
 export default function WalletScreen({ navigation }) {
@@ -30,6 +31,7 @@ export default function WalletScreen({ navigation }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: 'white', padding: 16 }}>
+      <BackButton />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
         <Ionicons name="wallet-outline" size={36} color={'blue'} style={{ marginRight: 8 }} />
         <Text style={{ fontSize: 22, fontWeight: 'bold', color: 'blue', marginRight: 8 }}>Wallet</Text>

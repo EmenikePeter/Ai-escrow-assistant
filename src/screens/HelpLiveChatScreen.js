@@ -6,13 +6,13 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as Notifications from 'expo-notifications';
 import { useEffect, useRef, useState } from 'react';
 import {
-    FlatList, Image, KeyboardAvoidingView, Linking, Platform,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  FlatList, Image, KeyboardAvoidingView, Linking, Platform,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import io from 'socket.io-client';
 import { fetchAgentName } from '../utils/fetchAgentName';
@@ -409,108 +409,110 @@ function HelpLiveChatScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={90}
       >
-        {/* Header */}
-        <View style={styles.headerBar}>
-          <Text style={styles.headerTitle}>Live Chat with Support</Text>
-          {assignedAgent && (
-            <Text style={{ color: '#fff', fontSize: 14, marginTop: 4 }}>
-              Assigned Agent: {assignedAgent}
-            </Text>
-          )}
-        </View>
-
-        {/* Messages */}
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={(item, idx) => item._id || item.clientId || idx.toString()}
-          renderItem={renderItem}
-          contentContainerStyle={styles.chatContainer}
-        />
-        {/* Typing indicator */}
-        {(agentTyping || userTyping) && (
-          <View style={{ paddingLeft: 16, marginBottom: 8 }}>
-            {agentTyping && <Text style={{ color: '#888', fontStyle: 'italic' }}>Agent is typing...</Text>}
-            {userTyping && <Text style={{ color: '#888', fontStyle: 'italic' }}>User is typing...</Text>}
-          </View>
-        )}
-        {/* Start New Chat Button (when closed) */}
-        {chatClosed && (
-          <View style={{ alignItems: "center", marginVertical: 10 }}>
-            <Text style={{ color: "#888", marginBottom: 8 }}>
-              This chat session has been closed.
-            </Text>
-            <TouchableOpacity
-              style={{
-                backgroundColor: "#007bff",
-                paddingHorizontal: 16,
-                paddingVertical: 10,
-                borderRadius: 8,
-              }}
-              onPress={() => {
-                setMessages([]);      // clear old messages
-                setSessionId(null);   // reset session
-                setChatClosed(false); // reopen chat
-                setAssignedAgent(null);
-                setAssignedAgentEmail(null);
-                setInput("");
-              }}
-            >
-              <Text style={{ color: "#fff", fontWeight: "bold" }}>
-                Start New Chat
+        <View style={{ flex: 1 }}>
+          {/* Header */}
+          <View style={styles.headerBar}>
+            <Text style={styles.headerTitle}>Live Chat with Support</Text>
+            {assignedAgent && (
+              <Text style={{ color: '#fff', fontSize: 14, marginTop: 4 }}>
+                Assigned Agent: {assignedAgent}
               </Text>
+            )}
+          </View>
+
+          {/* Messages */}
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            keyExtractor={(item, idx) => item._id || item.clientId || idx.toString()}
+            renderItem={renderItem}
+            contentContainerStyle={styles.chatContainer}
+          />
+          {/* Typing indicator */}
+          {(agentTyping || userTyping) && (
+            <View style={{ paddingLeft: 16, marginBottom: 8 }}>
+              {agentTyping && <Text style={{ color: '#888', fontStyle: 'italic' }}>Agent is typing...</Text>}
+              {userTyping && <Text style={{ color: '#888', fontStyle: 'italic' }}>User is typing...</Text>}
+            </View>
+          )}
+          {/* Start New Chat Button (when closed) */}
+          {chatClosed && (
+            <View style={{ alignItems: "center", marginVertical: 10 }}>
+              <Text style={{ color: "#888", marginBottom: 8 }}>
+                This chat session has been closed.
+              </Text>
+              <TouchableOpacity
+                style={{
+                  backgroundColor: "#007bff",
+                  paddingHorizontal: 16,
+                  paddingVertical: 10,
+                  borderRadius: 8,
+                }}
+                onPress={() => {
+                  setMessages([]);      // clear old messages
+                  setSessionId(null);   // reset session
+                  setChatClosed(false); // reopen chat
+                  setAssignedAgent(null);
+                  setAssignedAgentEmail(null);
+                  setInput("");
+                }}
+              >
+                <Text style={{ color: "#fff", fontWeight: "bold" }}>
+                  Start New Chat
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Input Row */}
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.input}
+              value={input}
+              onChangeText={handleInputChange}
+              placeholder={
+                chatClosed
+                  ? "Chat closed. Type a new message to start again..."
+                  : "Type your message..."
+              }
+              placeholderTextColor="#bfc9d9"
+              editable={true}
+              onSubmitEditing={sendMessage}
+            />
+            <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+              <Ionicons name="send" size={24} color="#fff" />
+            </TouchableOpacity>
+            {/* Upload button */}
+            <TouchableOpacity style={[styles.sendButton, { backgroundColor: '#43a047' }]} onPress={handleFileUpload}>
+              <Ionicons name="attach" size={24} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.sendButton, { backgroundColor: '#e57373' }]} onPress={async () => {
+              if (!sessionId) return;
+              try {
+                const res = await fetch(`${API_BASE_URL}/api/chat/sessions/${sessionId}/clear`, { method: 'POST' });
+                const data = await res.json();
+                if (data.newSessionId) {
+                  setMessages([]);
+                  setAssignedAgent(null);
+                  setAssignedAgentEmail(null);
+                  setSessionId(data.newSessionId);
+                  setInput('');
+                  setChatClosed(false);
+                  setShowClosedNotice(false);
+                  // Immediately join new session room and fetch messages
+                  socket.emit('joinRoom', { sessionId: data.newSessionId, email });
+                  // Fetch messages for new session (should be empty)
+                  const msgRes = await fetch(`${API_BASE_URL}/api/chat/sessions/${data.newSessionId}/messages`);
+                  const msgs = await msgRes.json();
+                  setMessages(msgs || []);
+                }
+              } catch (e) {
+                alert('Failed to clear chat.');
+              }
+            }}>
+              <Ionicons name="trash" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
-        )}
-
-        {/* Input Row */}
-        <View style={styles.inputRow}>
-          <TextInput
-            style={styles.input}
-            value={input}
-            onChangeText={handleInputChange}
-            placeholder={
-              chatClosed
-                ? "Chat closed. Type a new message to start again..."
-                : "Type your message..."
-            }
-            placeholderTextColor="#bfc9d9"
-            editable={true}
-            onSubmitEditing={sendMessage}
-          />
-          <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-            <Ionicons name="send" size={24} color="#fff" />
-          </TouchableOpacity>
-          {/* Upload button */}
-          <TouchableOpacity style={[styles.sendButton, { backgroundColor: '#43a047' }]} onPress={handleFileUpload}>
-            <Ionicons name="attach" size={24} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.sendButton, { backgroundColor: '#e57373' }]} onPress={async () => {
-            if (!sessionId) return;
-            try {
-              const res = await fetch(`${API_BASE_URL}/api/chat/sessions/${sessionId}/clear`, { method: 'POST' });
-              const data = await res.json();
-              if (data.newSessionId) {
-                setMessages([]);
-                setAssignedAgent(null);
-                setAssignedAgentEmail(null);
-                setSessionId(data.newSessionId);
-                setInput('');
-                setChatClosed(false);
-                setShowClosedNotice(false);
-                // Immediately join new session room and fetch messages
-                socket.emit('joinRoom', { sessionId: data.newSessionId, email });
-                // Fetch messages for new session (should be empty)
-                const msgRes = await fetch(`${API_BASE_URL}/api/chat/sessions/${data.newSessionId}/messages`);
-                const msgs = await msgRes.json();
-                setMessages(msgs || []);
-              }
-            } catch (e) {
-              alert('Failed to clear chat.');
-            }
-          }}>
-            <Ionicons name="trash" size={24} color="#fff" />
-          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

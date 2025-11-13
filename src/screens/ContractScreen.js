@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Button, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import BackButton from '../../components/BackButton';
 import { COLORS } from '../constants/Theme';
 import { useUser } from '../context/UserContext';
 import { getWithAuth, postWithAuth } from '../utils/api';
@@ -358,6 +359,7 @@ export default function ContractScreen({ navigation }) {
   try {
     return (
       <View style={{ flex: 1 }}>
+        <BackButton />
         <ScrollView>
           {/* Recipient search UI */}
           <View style={{ marginBottom: 16 }}>
