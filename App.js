@@ -120,7 +120,12 @@ function SignUpScreen({ navigation }) {
       await AsyncStorage.setItem('email', email); // Save email for later profile fetch
       console.log('[DEBUG] Email set in AsyncStorage (SignUp):', email);
       Alert.alert('Success', res.data.message || 'Account created!', [
-        { text: 'OK', onPress: () => navigation.navigate('Log In') }
+        { text: 'OK', onPress: () => navigation.reset({
+            index: 0,
+            routes: [
+              { name: 'MainDrawer', params: { screen: 'Log In' } }
+            ]
+          }) }
       ]);
       // Optionally, store token: AsyncStorage.setItem('token', res.data.token)
       // console.log('[DEBUG] Token set in AsyncStorage (SignUp):', res.data.token);
