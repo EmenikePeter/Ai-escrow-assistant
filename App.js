@@ -79,6 +79,19 @@ function SignUpScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
   const [countryCode, setCountryCode] = useState('');
 
+  const navigateToLogIn = () => {
+    let nav = navigation;
+    while (nav) {
+      const state = nav.getState?.();
+      if (state?.routeNames?.includes('Log In')) {
+        nav.navigate?.('Log In');
+        return;
+      }
+      nav = nav.getParent?.();
+    }
+    navigation.navigate('Log In');
+  };
+
   const handleSignUp = async () => {
     if (password.length < 6) {
       setError('Password must be at least 6 characters.');
@@ -121,17 +134,7 @@ function SignUpScreen({ navigation }) {
       // Save email for later profile fetch
       console.log('[DEBUG] Email set in AsyncStorage (SignUp):', email);
       Alert.alert('Success', res.data.message || 'Account created!', [
-        {
-          text: 'OK',
-          onPress: () => {
-            const parentNav = navigation.getParent?.();
-            if (parentNav) {
-              parentNav.dispatch(DrawerActions.jumpTo('Log In'));
-            } else {
-              navigation.navigate('Log In');
-            }
-          }
-        }
+        { text: 'OK', onPress: navigateToLogIn }
       ]);
       // Optionally, store token: AsyncStorage.setItem('token', res.data.token)
       // console.log('[DEBUG] Token set in AsyncStorage (SignUp):', res.data.token);
