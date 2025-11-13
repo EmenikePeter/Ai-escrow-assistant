@@ -9,7 +9,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import axios from 'axios';
 import { PhoneNumberUtil } from 'google-libphonenumber';
 import { useEffect, useState } from 'react';
-import { Alert, Button, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Button, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import CalendarPicker from 'react-native-calendar-picker';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import Modal from 'react-native-modal';
@@ -142,7 +142,7 @@ function SignUpScreen({ navigation }) {
   };
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+    <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
       <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 16 }}>Sign Up</Text>
       {error ? <Text style={{ color: 'red', marginBottom: 8 }}>{error}</Text> : null}
       <TextInput
@@ -276,7 +276,7 @@ function SignUpScreen({ navigation }) {
         style={{ width: '80%', borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 12 }}
       />
       <Button title={loading ? 'Signing Up...' : 'Sign Up'} onPress={handleSignUp} color="#4B7BEC" disabled={loading} />
-    </View>
+    </ScrollView>
   );
 }
 
