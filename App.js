@@ -4,12 +4,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createDrawerNavigator } from '@react-navigation/drawer';
-import { NavigationContainer, useNavigation } from '@react-navigation/native';
+import { CommonActions, NavigationContainer, useNavigation } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import axios from 'axios';
 import { PhoneNumberUtil } from 'google-libphonenumber';
 import { useEffect, useState } from 'react';
-import { Alert, Button, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Button, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import CalendarPicker from 'react-native-calendar-picker';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import Modal from 'react-native-modal';
@@ -81,15 +81,26 @@ function SignUpScreen({ navigation }) {
 
   const navigateToLogIn = () => {
     let nav = navigation;
+    const visited = [];
     while (nav) {
       const state = nav.getState?.();
-      if (state?.routeNames?.includes('Log In')) {
-        nav.navigate?.('Log In');
-        return;
+      if (state) {
+        visited.push(state.routeNames);
+        if (state.routeNames?.includes('Log In')) {
+          nav.navigate?.('Log In');
+          console.log('[SignUp] Navigated within navigator to "Log In"');
+          return;
+        }
       }
       nav = nav.getParent?.();
     }
-    navigation.navigate('Log In');
+    console.log('[SignUp] Log In route not found in visited navigators:', visited);
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: 'MainDrawer',
+        params: { screen: 'Log In' }
+      })
+    );
   };
 
   const handleSignUp = async () => {
@@ -133,9 +144,15 @@ function SignUpScreen({ navigation }) {
       await AsyncStorage.setItem('email', email); 
       // Save email for later profile fetch
       console.log('[DEBUG] Email set in AsyncStorage (SignUp):', email);
-      Alert.alert('Success', res.data.message || 'Account created!', [
-        { text: 'OK', onPress: navigateToLogIn }
-      ]);
+      const successMessage = res.data.message || 'Account created!';
+      if (Platform.OS === 'web') {
+        console.log('[SignUp] Success on web, navigating to Log In without alert');
+        navigateToLogIn();
+      } else {
+        Alert.alert('Success', successMessage, [
+          { text: 'OK', onPress: navigateToLogIn }
+        ]);
+      }
       // Optionally, store token: AsyncStorage.setItem('token', res.data.token)
       // console.log('[DEBUG] Token set in AsyncStorage (SignUp):', res.data.token);
     } catch (err) {
