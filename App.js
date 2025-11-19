@@ -1,4 +1,3 @@
-import { API_BASE_URL } from '@env';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
@@ -8,12 +7,14 @@ import { CommonActions, NavigationContainer, useNavigation } from '@react-naviga
 import { createStackNavigator } from '@react-navigation/stack';
 import axios from 'axios';
 import { PhoneNumberUtil } from 'google-libphonenumber';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Button, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import CalendarPicker from 'react-native-calendar-picker';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import Modal from 'react-native-modal';
-import { UserProvider } from './src/context/UserContext';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { API_BASE_URL } from './src/config/env';
+import { UserProvider, useUser } from './src/context/UserContext';
 import ChatHistoryDetailScreen from './src/screens/ChatHistoryDetailScreen';
 import ContractScreen from './src/screens/ContractScreen';
 import DashboardScreen from './src/screens/DashboardScreen';
@@ -36,6 +37,9 @@ import ReceivedContractsScreen from './src/screens/ReceivedContractsScreen';
 import RecipientSignContractScreen from './src/screens/RecipientSignContractScreen';
 import WalletScreen from './src/screens/WalletScreen';
 import { StripeProvider } from './src/utils/StripeProvider';
+if (Platform.OS === 'web') {
+  require('./web/global.css');
+}
 let countryRegionData = [];
 try {
   countryRegionData = require('country-region-data/dist/data-umd');
@@ -336,16 +340,20 @@ function AuthGuard({ children, navigation }) {
 
 function MainTabs(props) {
   const [profile, setProfile] = useState(null);
+  const { setUser } = useUser();
   useEffect(() => {
     AsyncStorage.getItem('email').then(async email => {
       if (email) {
         try {
-          const res = await axios.get(`${API_BASE_URL}/api/profile?email=${email}`);
+          const token = await AsyncStorage.getItem('token');
+          const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+          const res = await axios.get(`${API_BASE_URL}/api/profile?email=${email}`, config);
           setProfile(res.data);
+          setUser(res.data || null);
         } catch {}
       }
     });
-  }, []);
+  }, [setUser]);
   const isAdmin = profile?.userType === 'Admin';
   return (
     <Tab.Navigator
@@ -373,6 +381,7 @@ function MainTabs(props) {
             onPress={() => props.navigation.openDrawer()}
           />
         ),
+        contentStyle: { flex: 1 },
       })}
     >
       {!isAdmin && <Tab.Screen name="Home" component={HomeScreen} />}
@@ -389,9 +398,12 @@ function MainTabs(props) {
 
 
 function LogoutScreen({ navigation }) {
+  const { setUser } = useUser();
   useEffect(() => {
     (async () => {
       await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('email');
+      setUser(null);
     console.log('[DEBUG] Token removed from AsyncStorage (Logout)');
       navigation.reset({
         index: 0,
@@ -415,6 +427,7 @@ function LogoutScreen({ navigation }) {
 
 function MainDrawer() {
   const navigation = useNavigation();
+  const { setUser } = useUser();
   const [authenticated, setAuthenticated] = useState(false);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -425,19 +438,25 @@ function MainDrawer() {
       setAuthenticated(!!token);
       if (!token) {
         setProfile(null);
+        setUser(null);
         setLoading(false);
         return;
       }
       const email = await AsyncStorage.getItem('email');
       if (email) {
         try {
-          const res = await axios.get(`${API_BASE_URL}/api/profile?email=${email}`);
+          const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+          const res = await axios.get(`${API_BASE_URL}/api/profile?email=${email}`, config);
           setProfile(res.data);
+          setUser(res.data || null);
           console.log('Drawer profile:', res.data);
         } catch (err) {
           setProfile(null);
+          setUser(null);
           console.log('Drawer profile fetch error:', err);
         }
+      } else {
+        setUser(null);
       }
       setLoading(false);
     };
@@ -474,38 +493,74 @@ function MainDrawer() {
   );
 }
 
-export default function App() {
-  // ...existing code...
+function AppInner() {
+  const { setUser } = useUser();
+  const hasLoggedMount = useRef(false);
+
   useEffect(() => {
-    console.log('App component mounted');
-  }, []);
+    if (!hasLoggedMount.current) {
+      console.log('App component mounted');
+      hasLoggedMount.current = true;
+    }
+    const loadUserProfile = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        const email = await AsyncStorage.getItem('email');
+        if (!email) {
+          setUser(null);
+          return;
+        }
+        const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+        const response = await axios.get(`${API_BASE_URL}/api/profile?email=${email}`, config);
+        if (response.data) {
+          setUser(response.data);
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        console.warn('[App] Failed to bootstrap user context', error?.message || error);
+        setUser(null);
+      }
+    };
+    loadUserProfile();
+  }, [setUser]);
 
   return (
-    <UserProvider>
-      <StripeProvider publishableKey="pk_test_51RNoEOQxvR5fEokOLaTo3se939jgPBNjzBCeIwj7gwZM0DCNWE1TYSiPX5eAl35TafBk46R3o8n3wpgk0l4JhhtS00ZWRoTYEr">
-        <KeyboardProvider>
+    <StripeProvider publishableKey="pk_test_51RNoEOQxvR5fEokOLaTo3se939jgPBNjzBCeIwj7gwZM0DCNWE1TYSiPX5eAl35TafBk46R3o8n3wpgk0l4JhhtS00ZWRoTYEr">
+      <KeyboardProvider>
+        <SafeAreaProvider>
           <NavigationContainer>
-            <Stack.Navigator>
-              <Stack.Screen name="MainDrawer" component={MainDrawer} options={{ headerShown: false }} />
-              <Stack.Screen name="Inbox" component={InboxScreen} options={{ headerShown: true, title: 'Inbox' }} />
-              <Stack.Screen name="Help" component={HelpScreen} options={{ headerShown: true, title: 'Help & Support' }} />
-              <Stack.Screen name="HistoryScreen" component={HistoryScreen} options={{ headerShown: true, title: 'History' }} />
-              <Stack.Screen name="ChatHistoryDetail" component={ChatHistoryDetailScreen} options={{ headerShown: true, title: 'Chat Session Details' }} />
-              <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ headerShown: true, title: 'Dashboard' }} />
-              <Stack.Screen name="PreviewContract" component={PreviewContractScreen} options={{ headerShown: true, title: 'Preview Contract' }} />
-              <Stack.Screen name="PrintoutScreen" component={PrintoutScreen} options={{ headerShown: true, title: 'Print / Save Contract' }} />
-              <Stack.Screen name="OriginatorSignContractScreen" component={OriginatorSignContractScreen} options={{ headerShown: true, title: 'Sign Contract (Originator)' }} />
-              <Stack.Screen name="RecipientSignContractScreen" component={RecipientSignContractScreen} options={{ headerShown: true, title: 'Sign Contract (Recipient)' }} />
-              <Stack.Screen name="DisputeDetail" component={DisputeDetailScreen} options={{ headerShown: true, title: 'Dispute Details' }} />
-              <Stack.Screen name="PayoutHistory" component={PayoutHistoryScreen} options={{ headerShown: true, title: 'Payout History' }} />
-              <Stack.Screen name="ChatScreen" component={require('./src/screens/ChatScreen').default} options={{ headerShown: true, title: 'Chat' }} />
-              <Stack.Screen name="Deposit" component={DepositScreen} options={{ headerShown: true, title: 'Deposit to Escrow' }} />
-              <Stack.Screen name="Wallet" component={WalletScreen} options={{ headerShown: true, title: 'Wallet & Funds Center' }} />
-              <Stack.Screen name="EditContractScreen" component={EditContractScreen} options={{ headerShown: true, title: 'Edit Contract' }} />
-            </Stack.Navigator>
+          <View style={{ flex: 1, ...(Platform.OS === 'web' ? { minHeight: '100vh' } : {}) }}>
+          <Stack.Navigator screenOptions={{ contentStyle: { flex: 1 } }}>
+            <Stack.Screen name="MainDrawer" component={MainDrawer} options={{ headerShown: false }} />
+            <Stack.Screen name="Inbox" component={InboxScreen} options={{ headerShown: true, title: 'Inbox' }} />
+            <Stack.Screen name="Help" component={HelpScreen} options={{ headerShown: true, title: 'Help & Support' }} />
+            <Stack.Screen name="HistoryScreen" component={HistoryScreen} options={{ headerShown: true, title: 'History' }} />
+            <Stack.Screen name="ChatHistoryDetail" component={ChatHistoryDetailScreen} options={{ headerShown: true, title: 'Chat Session Details' }} />
+            <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ headerShown: true, title: 'Dashboard' }} />
+            <Stack.Screen name="PreviewContract" component={PreviewContractScreen} options={{ headerShown: true, title: 'Preview Contract' }} />
+            <Stack.Screen name="PrintoutScreen" component={PrintoutScreen} options={{ headerShown: true, title: 'Print / Save Contract' }} />
+            <Stack.Screen name="OriginatorSignContractScreen" component={OriginatorSignContractScreen} options={{ headerShown: true, title: 'Sign Contract (Originator)' }} />
+            <Stack.Screen name="RecipientSignContractScreen" component={RecipientSignContractScreen} options={{ headerShown: true, title: 'Sign Contract (Recipient)' }} />
+            <Stack.Screen name="DisputeDetail" component={DisputeDetailScreen} options={{ headerShown: true, title: 'Dispute Details' }} />
+            <Stack.Screen name="PayoutHistory" component={PayoutHistoryScreen} options={{ headerShown: true, title: 'Payout History' }} />
+            <Stack.Screen name="ChatScreen" component={require('./src/screens/ChatScreen').default} options={{ headerShown: true, title: 'Chat' }} />
+            <Stack.Screen name="Deposit" component={DepositScreen} options={{ headerShown: true, title: 'Deposit to Escrow' }} />
+            <Stack.Screen name="Wallet" component={WalletScreen} options={{ headerShown: true, title: 'Wallet & Funds Center' }} />
+            <Stack.Screen name="EditContractScreen" component={EditContractScreen} options={{ headerShown: true, title: 'Edit Contract' }} />
+          </Stack.Navigator>
+          </View>
           </NavigationContainer>
-        </KeyboardProvider>
-      </StripeProvider>
+        </SafeAreaProvider>
+      </KeyboardProvider>
+    </StripeProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <UserProvider>
+      <AppInner />
     </UserProvider>
   );
 }

@@ -1,9 +1,9 @@
-import { API_BASE_URL } from '@env';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import React, { useEffect } from 'react';
 import { Button, Text, View } from 'react-native';
+import { API_BASE_URL } from '../config/env';
 import { COLORS } from '../constants/Theme';
 import { validateColor } from '../utils/colorValidator';
 

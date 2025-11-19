@@ -1,8 +1,8 @@
-import { API_BASE_URL } from '@env';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { Button, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import BackButton from '../../components/BackButton';
+import { API_BASE_URL } from '../config/env';
 import { COLORS } from '../constants/Theme';
 import { useUser } from '../context/UserContext';
 import { getWithAuth } from '../utils/api';
@@ -62,6 +62,7 @@ export default function ReceivedContractsScreen({ navigation }) {
                 {c.signatures && c.signatures.length > 0 && (
                   <Text>Signature: {c.signatures.find(s => s.email === c.originator.email)?.signature || 'Not signed yet'}</Text>
                 )}
+                <Text style={{ marginTop: 8, fontWeight: 'bold' }}>Status: {c.status}</Text>
                 <TouchableOpacity
                   style={{
                     backgroundColor: COLORS.primary,

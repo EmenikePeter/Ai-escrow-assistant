@@ -2,7 +2,6 @@
 import bcrypt from 'bcryptjs';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import express from 'express';
 import fs from 'fs';
 import http from 'http';
@@ -11,10 +10,14 @@ import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import path from 'path';
 import { Server } from 'socket.io';
+import Stripe from 'stripe';
 import { v4 as uuidv4 } from 'uuid';
 import chatUploadRoutes from './chat-upload.js';
+import './env-loader.js';
 import setupChatSocket from './initChatSocket.js';
+import auth from './middleware/auth.js';
 import User from './models/User.js';
+import WalletTransaction from './models/WalletTransaction.js';
 import { aiChat, buildClausePrompt, generateDisputeClause, legalReview, query, summarizeContract } from './openai-api.js';
 import adminChatRoutesModule from './routes/adminChatRoutes.js';
 import adminUserRoutes from './routes/adminUserRoutes.js';
@@ -27,6 +30,7 @@ import disputeRoutes from './routes/disputeRoutes.js';
 import helpRoutes from './routes/helpRoutes.js';
 import historyRoutes from './routes/historyRoutes.js';
 import messageRoutes from './routes/messageRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
 import pushTokenRoutes from './routes/pushTokenRoutes.js';
 import supportUserRoutes from './routes/supportUserRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
@@ -45,8 +49,8 @@ const payoutSchema = new mongoose.Schema({
 });
 const Payout = mongoose.model('Payout', payoutSchema);
 console.log('Starting server.js...');
-dotenv.config();
 const app = express();
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Log all responses and errors globally
 app.use((req, res, next) => {
@@ -169,7 +173,11 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     // Create JWT
-    const token = jwt.sign({ id: user._id, role: user.role, name: user.name, email: user.email }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+    const token = jwt.sign(
+      { id: user._id, role: user.role, name: user.name, email: user.email },
+      process.env.JWT_SECRET || 'secretkey',
+      { expiresIn: '7d' }
+    );
 
     // Send token as cookie and user info in response
     res.cookie('token', token, { httpOnly: true, sameSite: 'lax' });
@@ -240,8 +248,6 @@ app.get('/api/contracts/dashboard', async (req, res) => {
 });
 const adminChatRoutes = adminChatRoutesModule.default || adminChatRoutesModule;
 
-dotenv.config();
-
 // Define User schema and model
 
 // Connect to MongoDB
@@ -269,6 +275,7 @@ app.use('/api/contracts', contractRoutes);
 app.use('/api/disputes', disputeRoutes);
 app.use('/api/support', agentNameRoutes);
 app.use('/api/chat', chatSessionRoutes); // <-- new REST endpoints for chat sessions
+app.use('/api', paymentRoutes);
 // Archived chat history endpoints
 app.use('/api/history', historyRoutes);
 // Serve uploads folder statically for file/image previews
@@ -580,7 +587,7 @@ app.post('/api/login', async (req, res) => {
       console.log('[LOGIN] Password valid for user:', email);
     }
     // Create JWT token
-    const token = jwt.sign({ email: user.email }, 'secretkey', { expiresIn: '1d' });
+    const token = jwt.sign({ email: user.email }, process.env.JWT_SECRET || 'secretkey', { expiresIn: '1d' });
     console.log('[LOGIN] Login successful for:', email, 'Token:', token);
     res.json({ token });
   } catch (err) {
@@ -683,31 +690,85 @@ server.listen(4000, '0.0.0.0', () => {
 
 
 // Create payout and store in DB
-app.post('/api/payout', async (req, res) => {
+app.post('/api/payout', auth, async (req, res) => {
   try {
     const { uuid, amount, currency = 'usd', contractId } = req.body;
-    const user = await User.findOne({ uuid });
+    const targetUuid = uuid || req.user.uuid;
+    const payoutAmount = typeof amount === 'number' ? amount : 0;
+    if (!payoutAmount) {
+      return res.status(400).json({ error: 'A valid amount is required for payout.' });
+    }
+
+    const user = await User.findOne({ uuid: targetUuid });
     if (!user || !user.stripeAccountId) {
       return res.status(404).json({ error: 'User or Stripe account not found.' });
     }
     // Create Stripe payout
     const payout = await stripe.payouts.create({
-      amount: Math.round(amount * 100),
+      amount: Math.round(payoutAmount * 100),
       currency,
     }, {
       stripeAccount: user.stripeAccountId,
     });
     // Save payout to DB
     const payoutRecord = new Payout({
-      userUuid: uuid,
+      userUuid: targetUuid,
       stripeAccountId: user.stripeAccountId,
-      amount,
+      amount: payoutAmount,
       currency,
       status: payout.status,
       payoutId: payout.id,
       contractId: contractId || null,
     });
     await payoutRecord.save();
+
+    if (contractId) {
+      try {
+        const contract = await Contract.findById(contractId);
+        if (contract) {
+          const status = payout.status === 'paid' ? 'completed' : 'payout_requested';
+          contract.escrowStatus = status;
+          const existingEscrow = typeof contract.escrowedAmount === 'number' ? contract.escrowedAmount : 0;
+          const existingReleased = typeof contract.releasedAmount === 'number' ? contract.releasedAmount : 0;
+          contract.releasedAmount = existingReleased + payoutAmount;
+          contract.escrowedAmount = Math.max(existingEscrow - payoutAmount, 0);
+          contract.lastEscrowActivityAt = new Date();
+          if (!Array.isArray(contract.escrowHistory)) {
+            contract.escrowHistory = [];
+          }
+          contract.escrowHistory.push({
+            type: 'payout',
+            status: payout.status,
+            amount: payoutAmount,
+            currency,
+            actor: req.user.email,
+            note: 'Payout requested to Stripe.',
+            createdAt: new Date(),
+          });
+          await contract.save();
+        }
+      } catch (contractErr) {
+        console.error('[Payout] Failed to update contract after payout:', contractErr);
+      }
+    }
+
+    if (user?._id) {
+      await WalletTransaction.create({
+        user: user._id,
+        contractId: contractId || undefined,
+        type: 'withdrawal',
+        status: payout.status,
+        amount: payoutAmount,
+        currency,
+        reference: payout.id,
+        description: 'Payout requested to Stripe account.',
+        metadata: {
+          stripeAccountId: user.stripeAccountId,
+          initiatedBy: req.user.email,
+        },
+      });
+    }
+
     res.json({ payout, contractId: contractId || null });
   } catch (err) {
     console.error('[Payout] Error:', err);
@@ -755,120 +816,6 @@ app.post('/api/admin/payouts/update', async (req, res) => {
   } catch (err) {
     console.error('[Admin Update Payout] Error:', err);
     res.status(500).json({ error: 'Failed to update payout', details: err?.message || err });
-  }
-});
-// Route: Payment intent creation (uses recipientUuid)
-import Stripe from 'stripe';
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-app.post('/api/create-payment-intent', async (req, res) => {
-  try {
-    const { amount, currency = 'usd', fee, recipientUuid } = req.body;
-    // Look up recipient by UUID
-    let recipient = recipientUuid ? await User.findOne({ uuid: recipientUuid }) : null;
-    if (!recipient) return res.status(404).json({ error: 'Recipient not found.' });
-
-    // Automatically create Stripe account if not present
-    if (!recipient.stripeAccountId) {
-      const account = await stripe.accounts.create({
-        type: 'express',
-        country: 'US',
-        email: recipient.email,
-        capabilities: { transfers: { requested: true } },
-      });
-      recipient.stripeAccountId = account.id;
-      await recipient.save();
-    }
-
-    // Create payment intent (demo: not actually transferring funds)
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Stripe expects cents
-      currency,
-      transfer_data: {
-        destination: recipient.stripeAccountId,
-      },
-      // Add fee logic if needed
-    });
-    res.json({ clientSecret: paymentIntent.client_secret, recipient: recipient.email });
-  } catch (err) {
-    console.error('[Payment Intent] Error:', err);
-    res.status(500).json({ error: 'Failed to create payment intent', details: err?.message || err });
-  }
-});
-// Apple Pay payment intent endpoint
-app.post('/api/create-applepay-intent', async (req, res) => {
-  try {
-    const { amount, currency = 'usd', recipientUuid } = req.body;
-    let recipient = recipientUuid ? await User.findOne({ uuid: recipientUuid }) : null;
-    if (!recipient) return res.status(404).json({ error: 'Recipient not found.' });
-    // Auto-create Stripe account if needed
-    if (!recipient.stripeAccountId) {
-      const account = await stripe.accounts.create({
-        type: 'express',
-        country: 'US',
-        email: recipient.email,
-        capabilities: { transfers: { requested: true } },
-      });
-      recipient.stripeAccountId = account.id;
-      await recipient.save();
-    }
-    // Create payment intent for Apple Pay
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100),
-      currency,
-      payment_method_types: ['card', 'apple_pay'],
-      transfer_data: { destination: recipient.stripeAccountId },
-    });
-    res.json({ clientSecret: paymentIntent.client_secret, recipient: recipient.email });
-  } catch (err) {
-    console.error('[Apple Pay Intent] Error:', err);
-    res.status(500).json({ error: 'Failed to create Apple Pay payment intent', details: err?.message || err });
-  }
-});
-
-// Google Pay payment intent endpoint
-app.post('/api/create-googlepay-intent', async (req, res) => {
-  try {
-    const { amount, currency = 'usd', recipientUuid } = req.body;
-    let recipient = recipientUuid ? await User.findOne({ uuid: recipientUuid }) : null;
-    if (!recipient) return res.status(404).json({ error: 'Recipient not found.' });
-    // Auto-create Stripe account if needed
-    if (!recipient.stripeAccountId) {
-      const account = await stripe.accounts.create({
-        type: 'express',
-        country: 'US',
-        email: recipient.email,
-        capabilities: { transfers: { requested: true } },
-      });
-      recipient.stripeAccountId = account.id;
-      await recipient.save();
-    }
-    // Create payment intent for Google Pay
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100),
-      currency,
-      payment_method_types: ['card', 'google_pay'],
-      transfer_data: { destination: recipient.stripeAccountId },
-    });
-    res.json({ clientSecret: paymentIntent.client_secret, recipient: recipient.email });
-  } catch (err) {
-    console.error('[Google Pay Intent] Error:', err);
-    res.status(500).json({ error: 'Failed to create Google Pay payment intent', details: err?.message || err });
-  }
-});
-
-// Local payment endpoint
-app.post('/api/create-local-payment', async (req, res) => {
-  try {
-    const { amount, currency = 'usd', recipientUuid, reference } = req.body;
-    let recipient = recipientUuid ? await User.findOne({ uuid: recipientUuid }) : null;
-    if (!recipient) return res.status(404).json({ error: 'Recipient not found.' });
-    // Simulate local payment processing
-    // You can add custom logic here for local payment verification
-    res.json({ success: true, message: 'Local payment submitted.', reference, recipient: recipient.email });
-  } catch (err) {
-    console.error('[Local Payment] Error:', err);
-    res.status(500).json({ error: 'Failed to process local payment', details: err?.message || err });
   }
 });
 app.post('/read-file', async (req, res) => {

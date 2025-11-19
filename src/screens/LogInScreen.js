@@ -1,9 +1,9 @@
-import { API_BASE_URL } from '@env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { useState } from 'react';
 import { Button, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import BackButton from '../../components/BackButton';
+import { API_BASE_URL } from '../config/env';
 import { useUser } from '../context/UserContext';
 
 export default function LogInScreen({ navigation }) {

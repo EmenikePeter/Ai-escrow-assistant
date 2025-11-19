@@ -1,9 +1,11 @@
-import { API_BASE_URL } from '@env';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
+import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Button, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import BackButton from '../../components/BackButton';
+import { API_BASE_URL } from '../config/env';
 import { COLORS } from '../constants/Theme';
 import { useUser } from '../context/UserContext';
 import { getWithAuth, postWithAuth } from '../utils/api';
@@ -92,8 +94,31 @@ export default function ContractScreen({ navigation }) {
       setSearchResult(null);
     }
   };
-  const userContext = useUser();
-    const user = userContext.user || {};
+  const { user: currentUser, setUser } = useUser();
+  const user = currentUser || {};
+  useEffect(() => {
+    const ensureUserLoaded = async () => {
+      try {
+        const [token, email] = await Promise.all([
+          AsyncStorage.getItem('token'),
+          AsyncStorage.getItem('email'),
+        ]);
+        if (!email) {
+          return;
+        }
+        const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+        const response = await axios.get(`${API_BASE_URL}/api/profile?email=${email}`, config);
+        if (response.data) {
+          setUser(response.data);
+        }
+      } catch (error) {
+        console.warn('[ContractScreen] Failed to hydrate user context', error?.message || error);
+      }
+    };
+    if (!user || !user.email) {
+      ensureUserLoaded();
+    }
+  }, [user, setUser]);
   useEffect(() => {
     // Validate all major color usages in render styles
     validateColor(COLORS.border, 'COLORS.border');
@@ -169,9 +194,18 @@ export default function ContractScreen({ navigation }) {
     setLegalReviewLoading(false);
   };
   // Add missing onGenerateContract function
+  const resolveRootNavigation = () => {
+    const parent = navigation?.getParent?.() || null;
+    const grandParent = parent?.getParent?.() || null;
+    const root = grandParent?.getParent?.() || null;
+    return root || grandParent || parent || navigation;
+  };
+
   const onGenerateContract = () => {
+    console.log('[ContractScreen] Preview button pressed');
   // Prevent navigation if user context is not loaded or missing required fields
   if (!user?.name || !user?.email || !user?.uuid) {
+    console.warn('[ContractScreen] Missing user context when attempting preview', { user });
     Alert.alert('Error', 'User details are not loaded. Please wait or log in again.');
     return;
   }
@@ -195,16 +229,20 @@ export default function ContractScreen({ navigation }) {
   // role: '' (removed, only added in SignContractScreen)
   };
   setError('');
+  console.log('[ContractScreen] Preparing preview contract payload');
   if (!title.trim() || !description.trim() || !amount.trim() || !deadline.trim()) {
+    console.warn('[ContractScreen] Validation failed, missing fields', { title, description, amount, deadline });
     setError('Please fill all fields.');
     return;
   }
   if (isNaN(Number(amount)) || Number(amount) <= 0) {
+    console.warn('[ContractScreen] Validation failed, invalid amount', amount);
     setError('Enter a valid payment amount.');
     return;
   }
   // Simple date format check (YYYY-MM-DD)
   if (!/^\d{4}-\d{2}-\d{2}$/.test(deadline.trim())) {
+    console.warn('[ContractScreen] Validation failed, invalid deadline format', deadline);
     setError('Enter deadline in YYYY-MM-DD format.');
     return;
   }
@@ -224,7 +262,21 @@ export default function ContractScreen({ navigation }) {
     disputeClause,
     // Add other fields as needed for saving/fetching
   };
-  navigation.navigate('PreviewContract', { contract });
+  console.log('[ContractScreen] Prepared contract for preview', contract);
+  const targetNavigation = resolveRootNavigation();
+  console.log('[ContractScreen] Resolved navigation target', {
+    hasTarget: !!targetNavigation,
+    hasNavigate: targetNavigation && typeof targetNavigation.navigate === 'function',
+  });
+  if (targetNavigation && typeof targetNavigation.navigate === 'function') {
+    console.log('[ContractScreen] Navigating via resolved root navigator');
+    targetNavigation.navigate('PreviewContract', { contract });
+  } else if (navigation && typeof navigation.navigate === 'function') {
+    console.log('[ContractScreen] Navigating via local navigation prop');
+    navigation.navigate('PreviewContract', { contract });
+  } else {
+    console.warn('[ContractScreen] Unable to navigate to PreviewContract: navigation ref unavailable');
+  }
   };
   // Debug log to confirm screen mount
   useEffect(() => {
@@ -293,25 +345,27 @@ export default function ContractScreen({ navigation }) {
         description: description.trim(),
         amount: amount.trim(),
         deadline: deadline.trim(),
-        requirements: '', // Not used for mock
+        requirements: '', // Reserved for future use
         tone,
         language,
         includeDispute,
         numClauses
       };
-      // Always add mock clause in development mode
-      if (__DEV__) {
+      let clauses;
+      try {
+        console.log('[ContractScreen] Sending payload to generateClause', payload);
+        clauses = await generateClause(payload);
+        console.log('[ContractScreen] Clauses returned from API', clauses);
+      } catch (apiError) {
+        console.warn('[ContractScreen] generateClause failed, using mock clause fallback', apiError);
         const mockClause = 'Mock Escrow Contract Clause: Payment terms, completion criteria, milestones, penalties, and dispute resolution will be generated here.';
-        setClauses(prev => [...prev, mockClause]);
-        setAiResponse(mockClause);
+        clauses = [mockClause];
+      }
+      if (!clauses || !Array.isArray(clauses) || clauses.length === 0) {
+        setError('AI did not return a valid clause.');
       } else {
-        const clauses = await generateClause(payload);
-        if (!clauses || !Array.isArray(clauses) || clauses.length === 0) {
-          setError('AI did not return a valid clause.');
-        } else {
-          setClauses(prev => [...prev, ...clauses]);
-          setAiResponse(clauses[0]);
-        }
+        setClauses(prev => [...prev, ...clauses]);
+        setAiResponse(clauses[0]);
       }
     } catch (err) {
       setError(`Clause generation error: ${err}`);

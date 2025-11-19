@@ -9,20 +9,23 @@ export const generateClause = async (payload) => {
       `${API_BASE_URL}/generate-clause`,
       { ...payload, model: 'gpt-3.5-turbo' }
     );
-    if (response.data && response.data.output) {
-      return response.data.output;
+    const output = response?.data?.output;
+    if (Array.isArray(output) && output.length > 0) {
+      return output;
     }
-    if (response.data && response.data.error) {
-      return `API error: ${response.data.error}`;
+    if (typeof output === 'string' && output.trim().length > 0) {
+      return [output];
     }
-    return 'No clause generated. Please try again or check API logs.';
+    const backendError = response?.data?.error;
+    throw new Error(backendError ? `API error: ${backendError}` : 'No clause returned from API');
   } catch (error) {
     if (error.response) {
-      return `Server error: ${error.response.status} ${error.response.data?.error || error.response.data?.body || error.response.statusText}`;
-    } else if (error.request) {
-      return 'No response from backend. Is the API running?';
-    } else {
-      return `Request error: ${error.message}`;
+      const message = error.response.data?.error || error.response.data?.body || error.response.statusText;
+      throw new Error(`Server error: ${error.response.status} ${message}`.trim());
     }
+    if (error.request) {
+      throw new Error('No response from backend. Is the API running?');
+    }
+    throw new Error(`Request error: ${error.message}`);
   }
 };

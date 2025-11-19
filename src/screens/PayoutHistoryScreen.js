@@ -1,8 +1,8 @@
-import { API_BASE_URL } from '@env';
 import axios from 'axios';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Button, FlatList, Text, View } from 'react-native';
 import BackButton from '../../components/BackButton';
+import { API_BASE_URL } from '../config/env';
 import { COLORS } from '../constants/Theme';
 
 // Use API_BASE_URL from .env

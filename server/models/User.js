@@ -19,6 +19,8 @@ const userSchema = new mongoose.Schema({
   dob: String,
   skills: String,
   business: String,
+  stripeAccountId: { type: String },
+  stripeCustomerId: { type: String },
   teams: [
     {
       _id: { type: mongoose.Schema.Types.ObjectId, ref: 'Team' },

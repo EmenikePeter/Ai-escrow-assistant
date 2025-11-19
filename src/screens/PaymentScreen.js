@@ -1,11 +1,12 @@
-import { API_BASE_URL } from '@env';
 import { Ionicons } from '@expo/vector-icons';
-import { CardField, StripeProvider, useConfirmPayment } from '@stripe/stripe-react-native';
-import axios from 'axios';
-import { useEffect, useState } from 'react';
-import { Alert, Button, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Button, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { API_BASE_URL } from '../config/env';
 import { COLORS } from '../constants/Theme';
+import { useUser } from '../context/UserContext';
+import { getWithAuth, postWithAuth } from '../utils/api';
 import { validateColor } from '../utils/colorValidator';
+import { PaymentCardField, PaymentStripeProvider, usePaymentConfirm } from '../utils/stripeIntegration';
 
 // Use API_BASE_URL from .env
 
@@ -19,14 +20,17 @@ function getProgress(deadline) {
   return Math.max(0, Math.min(1, elapsed / total));
 }
 
-function PaymentScreen({ route }) {
+function PaymentScreenContent(props) {
+  const { route, publishableKey } = props;
+  const { user } = useUser();
   // Payment method state
   // Payment method selection
   const [paymentMethodType, setPaymentMethodType] = useState('card');
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCVC, setCardCVC] = useState('');
   const [paymentMethodSaved, setPaymentMethodSaved] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [localReference, setLocalReference] = useState('');
+  const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
+  const [savingPaymentMethod, setSavingPaymentMethod] = useState(false);
 
   // Bank details for payout
   const [bankName, setBankName] = useState('');
@@ -38,9 +42,49 @@ function PaymentScreen({ route }) {
 
   // Save payment method handler
   const handleSavePaymentMethod = async () => {
-    // Simulate saving payment method (replace with backend call if needed)
-    setPaymentMethodSaved(true);
-    Alert.alert('Payment Method Saved', 'Your payment method has been saved.');
+    if (!userIdentifier) {
+      Alert.alert('Sign In Required', 'You must be signed in to save a payment method.');
+      return;
+    }
+    if (paymentMethodType === 'card' && !cardDetails?.complete) {
+      Alert.alert('Incomplete Card', 'Enter complete card details before saving.');
+      return;
+    }
+    if (paymentMethodType === 'local' && !localReference) {
+      Alert.alert('Missing Reference', 'Add a reference number for your local payment method.');
+      return;
+    }
+
+    setSavingPaymentMethod(true);
+    try {
+      const payload = {
+        type: paymentMethodType,
+        reference: paymentMethodType === 'local' ? localReference : undefined,
+        cardSummary:
+          paymentMethodType === 'card'
+            ? {
+                brand: cardDetails?.brand,
+                last4: cardDetails?.last4,
+              }
+            : undefined,
+      };
+      const res = await postWithAuth(`${API_BASE_URL}/api/payment-methods`, payload);
+      const methods = Array.isArray(res?.data?.methods)
+        ? res.data.methods
+        : Array.isArray(res?.data)
+        ? res.data
+        : null;
+      if (methods) {
+        setPaymentMethods(methods);
+      }
+      setPaymentMethodSaved(true);
+      Alert.alert('Payment Method Saved', 'Your payment method has been saved.');
+    } catch (err) {
+      const message = err?.response?.data?.message || err.message || 'Failed to save payment method.';
+      Alert.alert('Error', message);
+    } finally {
+      setSavingPaymentMethod(false);
+    }
   };
 
   // Withdrawal handler
@@ -49,18 +93,27 @@ function PaymentScreen({ route }) {
       Alert.alert('Missing Details', 'Please fill in all bank details.');
       return;
     }
+    if (!userIdentifier) {
+      Alert.alert('Sign In Required', 'You must be signed in to withdraw funds.');
+      return;
+    }
+    setWithdrawalStatus('');
     setWithdrawalLoading(true);
     try {
-      // Simulate withdrawal (replace with backend call if needed)
-      setTimeout(() => {
-        setWithdrawalStatus('success');
-        setWithdrawalLoading(false);
-        Alert.alert('Withdrawal Successful', 'Funds have been withdrawn.');
-      }, 1500);
+      const res = await postWithAuth(`${API_BASE_URL}/api/wallet/withdraw`, {
+        bankName,
+        accountNumber,
+        iban,
+        accountHolder,
+      });
+      setWithdrawalStatus('success');
+      Alert.alert('Withdrawal Successful', res?.data?.message || 'Funds have been withdrawn.');
     } catch (err) {
       setWithdrawalStatus('failed');
+      const message = err?.response?.data?.message || err.message || 'Failed to withdraw funds.';
+      Alert.alert('Error', message);
+    } finally {
       setWithdrawalLoading(false);
-      Alert.alert('Error', err.message);
     }
   };
   // Payout state
@@ -71,7 +124,7 @@ function PaymentScreen({ route }) {
   const handleRequestPayout = async () => {
     setPayoutLoading(true);
     try {
-  const res = await axios.post(`${API_BASE_URL}/api/payout`, {
+      const res = await postWithAuth(`${API_BASE_URL}/api/payout`, {
         uuid: contract.recipientUuid,
         amount: contract.amount,
         currency: 'usd',
@@ -85,7 +138,8 @@ function PaymentScreen({ route }) {
       }
     } catch (err) {
       setPayoutStatus('failed');
-      Alert.alert('Error', err.message);
+      const message = err?.response?.data?.message || err.message || 'Failed to request payout.';
+      Alert.alert('Error', message);
     }
     setPayoutLoading(false);
   };
@@ -96,14 +150,26 @@ function PaymentScreen({ route }) {
   validateColor(COLORS.card, 'COLORS.card');
   validateColor(COLORS.border, 'COLORS.border');
     // Validate all hardcoded color values used in inline styles
-    validateColor('#000', 'CardField.textColor');
-    validateColor('#fff', 'CardField.backgroundColor');
+    validateColor('#000', 'PaymentCardField.textColor');
+    validateColor('#fff', 'PaymentCardField.backgroundColor');
     validateColor('#eee', 'ProgressBar.backgroundColor');
     validateColor('#ccc', 'PlatformFeeInput.borderColor');
     validateColor('green', 'EscrowedText.color');
     validateColor('#888', 'UnauthorizedText.color');
   }, []);
   // Fee customization state
+  const initialContract = route?.params?.contract || null;
+  const initialContractId =
+    route?.params?.contractId ||
+    initialContract?._id ||
+    initialContract?.id ||
+    initialContract?.contractId ||
+    '';
+  const [contract, setContract] = useState(initialContract);
+  const [contractLoading, setContractLoading] = useState(false);
+  const [contractError, setContractError] = useState('');
+  const contractId = contract?._id || contract?.id || contract?.contractId || initialContractId;
+  const isContractFlow = !!contractId;
   const [customFee, setCustomFee] = useState('');
   const [loading, setLoading] = useState(false);
   const [escrowed, setEscrowed] = useState(false);
@@ -111,25 +177,109 @@ function PaymentScreen({ route }) {
   const [cardDetails, setCardDetails] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingUrl, setOnboardingUrl] = useState('');
-  const [freelancerAccountId, setFreelancerAccountId] = useState(route?.params?.contract?.freelancerStripeAccountId || '');
-  const contract = route?.params?.contract;
-  // Determine if this screen is being used for a contract flow or tab/account flow
-  const isContractFlow = !!contract;
+  const [freelancerAccountId, setFreelancerAccountId] = useState(initialContract?.freelancerStripeAccountId || '');
+  const [riskSignals, setRiskSignals] = useState({ flags: [], summary: '' });
+  const [riskLoading, setRiskLoading] = useState(false);
   const userRole = route?.params?.userRole;
-  const { confirmPayment } = useConfirmPayment();
+  const { confirmPayment } = usePaymentConfirm();
+
+  const fetchContract = useCallback(async () => {
+    if (!contractId) return;
+    setContractLoading(true);
+    setContractError('');
+    try {
+      const res = await getWithAuth(`${API_BASE_URL}/api/contracts/${contractId}`);
+      if (res?.data?.contract) {
+        setContract(res.data.contract);
+      }
+    } catch (err) {
+      const message = err?.response?.data?.error || err?.message || 'Failed to load contract details.';
+      setContractError(message);
+    } finally {
+      setContractLoading(false);
+    }
+  }, [contractId]);
+
+  const fetchRiskSignals = useCallback(async () => {
+    if (!contractId) return;
+    setRiskLoading(true);
+    try {
+      const res = await getWithAuth(`${API_BASE_URL}/api/contracts/${contractId}/risk`);
+      setRiskSignals({
+        flags: Array.isArray(res?.data?.flags) ? res.data.flags : [],
+        summary: res?.data?.summary || '',
+      });
+    } catch (err) {
+      setRiskSignals({ flags: [], summary: '' });
+    } finally {
+      setRiskLoading(false);
+    }
+  }, [contractId]);
+
+  useEffect(() => {
+    if (isContractFlow && contractId && (!contract || (contract._id || contract.id || contract.contractId) !== contractId)) {
+      fetchContract();
+    }
+  }, [contractId, isContractFlow, contract, fetchContract]);
+
+  useEffect(() => {
+    if (isContractFlow && contractId) {
+      fetchRiskSignals();
+    }
+  }, [contractId, isContractFlow, fetchRiskSignals]);
+
+  useEffect(() => {
+    if (contract?.freelancerStripeAccountId) {
+      setFreelancerAccountId(contract.freelancerStripeAccountId);
+    }
+  }, [contract?.freelancerStripeAccountId]);
+
+  useEffect(() => {
+    if (contract?.localPaymentReference) {
+      setLocalReference(contract.localPaymentReference);
+    }
+  }, [contract?.localPaymentReference]);
+
+  useEffect(() => {
+    if (contract?.escrowStatus) {
+      const fundedStatuses = ['funded', 'partially_released', 'released', 'payout_requested', 'completed'];
+      setEscrowed(fundedStatuses.includes(contract.escrowStatus));
+    }
+    if (contract?.lastPaymentIntentId) {
+      setPaymentIntentId(contract.lastPaymentIntentId);
+    }
+  }, [contract?.escrowStatus, contract?.lastPaymentIntentId]);
 
   const handleDeposit = async () => {
+    if (!contractId) {
+      Alert.alert('Missing Contract', 'A contract is required to deposit funds.');
+      return;
+    }
+    const workingContract = contract || initialContract;
+    if (!workingContract) {
+      Alert.alert('Missing Contract', 'Contract details are still loading.');
+      return;
+    }
+    if (paymentMethodType === 'card' && !cardDetails?.complete) {
+      Alert.alert('Incomplete Card', 'Enter complete card details before depositing.');
+      return;
+    }
+    if (paymentMethodType === 'local' && !localReference) {
+      Alert.alert('Missing Reference', 'Add a reference number for your local payment method.');
+      return;
+    }
     setLoading(true);
     try {
       // 1. Get PaymentIntent clientSecret from backend
       // Use custom fee if provided, else default to 5%
-      const platformFee = customFee !== '' ? Number(customFee) : contract.fee || contract.amount * 0.05;
-  const res = await axios.post(`${API_BASE_URL}/api/create-payment-intent`, {
-        amount: contract.amount,
+      const platformFee = customFee !== '' ? Number(customFee) : workingContract.fee || workingContract.amount * 0.05;
+      const res = await postWithAuth(`${API_BASE_URL}/api/create-payment-intent`, {
+        amount: workingContract.amount,
         currency: 'usd',
-        freelancerStripeAccountId: contract.freelancerStripeAccountId,
+        freelancerStripeAccountId: workingContract.freelancerStripeAccountId,
         fee: platformFee,
-        recipientUuid: contract.recipientUuid, // Pass UUID for backend routing
+        recipientUuid: workingContract.recipientUuid, // Pass UUID for backend routing
+        contractId,
       });
       const clientSecret = res.data.clientSecret;
 
@@ -145,12 +295,87 @@ function PaymentScreen({ route }) {
         setEscrowed(true);
         setPaymentIntentId(paymentIntent.id);
         Alert.alert('Payment successful!', 'Funds are now in escrow.');
+        // Refresh stored payment methods after a successful deposit in case a new card was saved by Stripe
+        fetchPaymentMethods();
+        await postWithAuth(`${API_BASE_URL}/api/contracts/${contractId}/escrow/confirm`, {
+          paymentIntentId: paymentIntent.id,
+          amount: workingContract.amount,
+          currency: 'usd',
+          methodType: 'card',
+        });
+        await fetchContract();
+        await fetchRiskSignals();
       }
     } catch (err) {
-      Alert.alert('Error', err.message);
+      const message = err?.response?.data?.message || err.message || 'Failed to process payment.';
+      Alert.alert('Error', message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
+
+  const handleLocalPay = useCallback(async () => {
+    if (!contractId) {
+      Alert.alert('Missing Contract', 'A contract is required to submit a local payment.');
+      return;
+    }
+    const workingContract = contract || initialContract;
+    if (!workingContract) {
+      Alert.alert('Missing Contract', 'Contract details are still loading.');
+      return;
+    }
+    if (!localReference) {
+      Alert.alert('Missing Reference', 'Add a reference number for your local payment method.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await postWithAuth(`${API_BASE_URL}/api/payments/local`, {
+        contractId,
+        reference: localReference,
+      });
+      setEscrowed(true);
+      Alert.alert('Local Payment Recorded', res?.data?.message || 'Local payment has been submitted for review.');
+      if (res?.data?.contract) {
+        setContract(res.data.contract);
+      }
+      await fetchContract();
+      await fetchRiskSignals();
+    } catch (err) {
+      const message = err?.response?.data?.message || err.message || 'Failed to record local payment.';
+      Alert.alert('Error', message);
+    } finally {
+      setLoading(false);
+    }
+  }, [contractId, contract, initialContract, localReference, fetchContract, fetchRiskSignals]);
+
+  const handleApplePay = useCallback(() => {
+    Alert.alert('Not Available', 'Apple Pay support is not enabled yet.');
+  }, []);
+
+  const handleGooglePay = useCallback(() => {
+    Alert.alert('Not Available', 'Google Pay support is not enabled yet.');
+  }, []);
+
+  const handleCardDetailsChange = useCallback(
+    (details) => {
+      setCardDetails(details);
+      if (paymentMethodSaved) {
+        setPaymentMethodSaved(false);
+      }
+    },
+    [paymentMethodSaved]
+  );
+
+  const handleLocalReferenceChange = useCallback(
+    (value) => {
+      setLocalReference(value);
+      if (paymentMethodSaved) {
+        setPaymentMethodSaved(false);
+      }
+    },
+    [paymentMethodSaved]
+  );
 
   const handleReleaseFunds = async () => {
     if (!paymentIntentId) {
@@ -159,7 +384,7 @@ function PaymentScreen({ route }) {
     }
     setLoading(true);
     try {
-  const res = await axios.post(`${API_BASE_URL}/api/release-funds`, {
+      const res = await postWithAuth(`${API_BASE_URL}/api/release-funds`, {
         paymentIntentId,
       });
       if (res.data.success) {
@@ -168,15 +393,17 @@ function PaymentScreen({ route }) {
         Alert.alert('Error', 'Failed to release funds.');
       }
     } catch (err) {
-      Alert.alert('Error', err.message);
+      const message = err?.response?.data?.message || err.message || 'Failed to release funds.';
+      Alert.alert('Error', message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   // Onboarding handler
   const handleStripeOnboarding = async () => {
     try {
-  const res = await axios.post(`${API_BASE_URL}/api/create-stripe-account`, {
+      const res = await postWithAuth(`${API_BASE_URL}/api/create-stripe-account`, {
         email: contract.freelancerEmail, // or get from user context
       });
       setFreelancerAccountId(res.data.accountId);
@@ -184,64 +411,165 @@ function PaymentScreen({ route }) {
       setShowOnboarding(true);
 
       // TODO: Save accountId to backend for this freelancer (call user update endpoint)
-      // await axios.post('/api/update-freelancer-stripe-id', { email: ..., accountId: res.data.accountId });
+      // await postWithAuth('/api/update-freelancer-stripe-id', { email: ..., accountId: res.data.accountId });
     } catch (err) {
-      Alert.alert('Error', err.message);
+      const message = err?.response?.data?.message || err.message || 'Failed to start Stripe onboarding.';
+      Alert.alert('Error', message);
     }
   };
 
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [paymentHistory, setPaymentHistory] = useState([]);
+  const [paymentHistoryLoading, setPaymentHistoryLoading] = useState(false);
+
+  const contractLocalReference = contract?.localPaymentReference || '';
 
   useEffect(() => {
-    // Fetch payment history for current user (by uuid)
-    const fetchHistory = async () => {
-      try {
-        const uuid = route?.params?.userUuid || contract?.recipientUuid;
-        if (!uuid) return;
-        const res = await fetch(`/api/payouts?uuid=${uuid}`);
-        const data = await res.json();
-        setPaymentHistory(data.payouts || []);
-      } catch (err) {
-        setPaymentHistory([]);
-      }
-    };
-    if (showAccountModal) fetchHistory();
-  }, [showAccountModal]);
+    if (contractLocalReference) {
+      setLocalReference(contractLocalReference);
+    }
+  }, [contractLocalReference]);
+
+  const userIdentifier = user?.uuid || user?._id || user?.id || user?.email || '';
+  const userEmail = user?.email || '';
+
+  const isApplePayAvailable = false;
+  const isGooglePayAvailable = false;
+  const isLocalMethodAvailable = true;
+
+  const paymentOptions = useMemo(
+    () => [
+      { type: 'card', label: 'Card', enabled: true },
+      { type: 'applepay', label: 'Apple Pay', enabled: isApplePayAvailable },
+      { type: 'googlepay', label: 'Google Pay', enabled: isGooglePayAvailable },
+      { type: 'local', label: 'Local Method', enabled: isLocalMethodAvailable },
+    ],
+    [isApplePayAvailable, isGooglePayAvailable, isLocalMethodAvailable]
+  );
+
+  const availablePaymentOptions = useMemo(
+    () => paymentOptions.filter((option) => option.enabled),
+    [paymentOptions]
+  );
+
+  useEffect(() => {
+    if (!availablePaymentOptions.length) return;
+    if (!availablePaymentOptions.some((option) => option.type === paymentMethodType)) {
+      setPaymentMethodType(availablePaymentOptions[0].type);
+    }
+  }, [availablePaymentOptions, paymentMethodType]);
+
+  useEffect(() => {
+    if (!paymentMethods.length) {
+      setPaymentMethodSaved(false);
+      return;
+    }
+    const hasMethodForType = paymentMethods.some((method) => {
+      if (!method?.type) return true;
+      return method.type === paymentMethodType;
+    });
+    setPaymentMethodSaved(hasMethodForType);
+  }, [paymentMethods, paymentMethodType]);
+
+  const fetchPaymentMethods = useCallback(async () => {
+    if (!userIdentifier) {
+      setPaymentMethods([]);
+      return;
+    }
+    setPaymentMethodsLoading(true);
+    try {
+      const res = await getWithAuth(`${API_BASE_URL}/api/payment-methods`);
+      const methods = Array.isArray(res?.data?.methods)
+        ? res.data.methods
+        : Array.isArray(res?.data)
+        ? res.data
+        : [];
+      setPaymentMethods(methods);
+    } catch (err) {
+      console.warn('[PaymentScreen] Failed to load payment methods', err?.response?.data || err.message);
+      setPaymentMethods([]);
+    } finally {
+      setPaymentMethodsLoading(false);
+    }
+  }, [userIdentifier]);
+
+  useEffect(() => {
+    if (!userIdentifier) return;
+    fetchPaymentMethods();
+  }, [userIdentifier, fetchPaymentMethods]);
+
+  const fetchPaymentHistory = useCallback(async () => {
+    if (!userIdentifier) return;
+    setPaymentHistoryLoading(true);
+    try {
+      const historyUrl = contractId
+        ? `${API_BASE_URL}/api/wallet/history?contractId=${contractId}`
+        : `${API_BASE_URL}/api/wallet/history`;
+      const res = await getWithAuth(historyUrl);
+      const history = Array.isArray(res?.data?.history)
+        ? res.data.history
+        : Array.isArray(res?.data)
+        ? res.data
+        : [];
+      setPaymentHistory(history);
+    } catch (err) {
+      console.warn('[PaymentScreen] Failed to load wallet history', err?.response?.data || err.message);
+      setPaymentHistory([]);
+    } finally {
+      setPaymentHistoryLoading(false);
+    }
+  }, [contractId, userIdentifier]);
+
+  useEffect(() => {
+    if (showAccountModal) {
+      fetchPaymentHistory();
+    }
+  }, [showAccountModal, fetchPaymentHistory]);
+
+  useEffect(() => {
+    if (!publishableKey) {
+      console.warn('Stripe publishable key is not configured. Set STRIPE_PUBLISHABLE_KEY in your environment.');
+    }
+  }, [publishableKey]);
+
+  if (!userEmail) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: 'white' }}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={{ marginTop: 12, color: COLORS.primary }}>Loading account...</Text>
+      </View>
+    );
+  }
 
   if (!contract) {
     return (
-      <StripeProvider publishableKey="pk_test_51RNoEOQxvR5fEokOLaTo3se939jgPBNjzBCeIwj7gwZM0DCNWE1TYSiPX5eAl35TafBk46R3o8n3wpgk0l4JhhtS00ZWRoTYEr">
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16, backgroundColor: 'white' }}>
-          <Ionicons name="card-outline" size={36} color={'blue'} />
-          <Text style={{ fontSize: 20, fontWeight: 'bold', color: 'blue', marginTop: 8 }}>Payment</Text>
-          <View style={{ marginTop: 24, width: '100%', backgroundColor: 'white', borderRadius: 12, padding: 16, elevation: 2, shadowColor: 'gray', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }}>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16, backgroundColor: 'white' }}>
+        <Ionicons name="card-outline" size={36} color={'blue'} />
+        <Text style={{ fontSize: 20, fontWeight: 'bold', color: 'blue', marginTop: 8 }}>Payment</Text>
+        <View style={{ marginTop: 24, width: '100%', backgroundColor: 'white', borderRadius: 12, padding: 16, elevation: 2, shadowColor: 'gray', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }}>
             <Text style={{ fontWeight: 'bold', color: COLORS.primary, marginBottom: 8 }}>Select Payment Method</Text>
             {/* Payment method selection UI */}
 <View style={{ flexDirection: 'row', marginBottom: 12 }}>
-  <TouchableOpacity onPress={() => setPaymentMethodType('card')} style={{ marginRight: 8 }}>
-    <Text style={{ color: paymentMethodType === 'card' ? 'blue' : 'gray' }}>Card</Text>
-  </TouchableOpacity>
-  <TouchableOpacity onPress={() => setPaymentMethodType('applepay')} style={{ marginRight: 8 }}>
-    <Text style={{ color: paymentMethodType === 'applepay' ? 'blue' : 'gray' }}>Apple Pay</Text>
-  </TouchableOpacity>
-  <TouchableOpacity onPress={() => setPaymentMethodType('googlepay')} style={{ marginRight: 8 }}>
-    <Text style={{ color: paymentMethodType === 'googlepay' ? 'blue' : 'gray' }}>Google Pay</Text>
-  </TouchableOpacity>
-  <TouchableOpacity onPress={() => setPaymentMethodType('local')}>
-    <Text style={{ color: paymentMethodType === 'local' ? 'blue' : 'gray' }}>Local Method</Text>
-  </TouchableOpacity>
+  {availablePaymentOptions.map((option) => (
+    <TouchableOpacity
+      key={option.type}
+      onPress={() => setPaymentMethodType(option.type)}
+      style={{ marginRight: 8 }}
+    >
+      <Text style={{ color: paymentMethodType === option.type ? 'blue' : 'gray' }}>{option.label}</Text>
+    </TouchableOpacity>
+  ))}
 </View>
 
 {/* Card Payment UI */}
 {paymentMethodType === 'card' && (
   <>
-    <CardField
+    <PaymentCardField
       postalCodeEnabled={true}
       placeholder={{ number: '4242 4242 4242 4242' }}
       cardStyle={{ backgroundColor: 'white', textColor: 'black' }}
       style={{ height: 50, marginVertical: 10 }}
-      onCardChange={setCardDetails}
+      onCardChange={handleCardDetailsChange}
     />
     <Button
       title={loading ? 'Processing...' : 'Deposit Funds'}
@@ -252,7 +580,7 @@ function PaymentScreen({ route }) {
 )}
 
 {/* Apple Pay UI */}
-{paymentMethodType === 'applepay' && (
+{isApplePayAvailable && paymentMethodType === 'applepay' && (
   <>
     <Text style={{ color: 'gray', marginBottom: 8 }}>Apple Pay will be used at checkout.</Text>
     <Button
@@ -264,7 +592,7 @@ function PaymentScreen({ route }) {
 )}
 
 {/* Google Pay UI */}
-{paymentMethodType === 'googlepay' && (
+{isGooglePayAvailable && paymentMethodType === 'googlepay' && (
   <>
     <Text style={{ color: 'gray', marginBottom: 8 }}>Google Pay will be used at checkout.</Text>
     <Button
@@ -283,7 +611,7 @@ function PaymentScreen({ route }) {
       style={{ borderWidth: 1, borderColor: 'gray', borderRadius: 6, padding: 8, width: '100%', marginBottom: 8, color: 'black' }}
       placeholder="Reference Number"
       value={localReference}
-      onChangeText={setLocalReference}
+      onChangeText={handleLocalReferenceChange}
     />
     <Button
       title={loading ? 'Processing...' : 'Deposit with Local Method'}
@@ -293,13 +621,17 @@ function PaymentScreen({ route }) {
   </>
 )}
             <Button
-              title={paymentMethodSaved ? 'Payment Method Saved' : 'Save Payment Method'}
+              title={savingPaymentMethod ? 'Saving...' : paymentMethodSaved ? 'Payment Method Saved' : 'Save Payment Method'}
               color={COLORS.primary}
               onPress={handleSavePaymentMethod}
-              disabled={paymentMethodSaved || (paymentMethodType === 'card' && (!cardNumber || !cardExpiry || !cardCVC))}
+              disabled={
+                savingPaymentMethod ||
+                (paymentMethodType === 'card' && !cardDetails?.complete) ||
+                (paymentMethodType === 'local' && !localReference)
+              }
             />
           </View>
-          <View style={{ marginTop: 32, width: '100%', backgroundColor: 'white', borderRadius: 12, padding: 16, elevation: 2, shadowColor: 'gray', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }}>
+        <View style={{ marginTop: 32, width: '100%', backgroundColor: 'white', borderRadius: 12, padding: 16, elevation: 2, shadowColor: 'gray', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }}>
             <Text style={{ fontWeight: 'bold', color: COLORS.primary, marginBottom: 8 }}>Withdraw Funds</Text>
             <TextInput
               style={{ borderWidth: 1, borderColor: 'gray', borderRadius: 6, padding: 8, width: '100%', marginBottom: 8, color: 'black' }}
@@ -338,16 +670,15 @@ function PaymentScreen({ route }) {
             {withdrawalStatus === 'failed' && (
               <Text style={{ color: 'red', marginTop: 8 }}>Withdrawal Failed.</Text>
             )}
-          </View>
         </View>
-      </StripeProvider>
+      </View>
     );
   }
 
   const progress = getProgress(contract.deadline);
 
   return (
-    <StripeProvider publishableKey="pk_test_51RNoEOQxvR5fEokOLaTo3se939jgPBNjzBCeIwj7gwZM0DCNWE1TYSiPX5eAl35TafBk46R3o8n3wpgk0l4JhhtS00ZWRoTYEr">
+    <>
       <View style={{ flex: 1, backgroundColor: 'white', padding: 16 }}>
   {/* Removed duplicate Account button row. Only show horizontal Payment header row with Account button. */}
         {/* Payment icon, header, and Account button in one row for tab screen only */}
@@ -376,26 +707,48 @@ function PaymentScreen({ route }) {
               <Text style={{ fontWeight: 'bold', color: COLORS.primary, marginBottom: 8 }}>Select Payment Method</Text>
               {/* Payment method selection UI */}
               <View style={{ flexDirection: 'row', marginBottom: 12 }}>
-                <TouchableOpacity onPress={() => setPaymentMethodType('card')} style={{ marginRight: 8 }}>
-                  <Text style={{ color: paymentMethodType === 'card' ? 'blue' : 'gray' }}>Card</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setPaymentMethodType('applepay')} style={{ marginRight: 8 }}>
-                  <Text style={{ color: paymentMethodType === 'applepay' ? 'blue' : 'gray' }}>Apple Pay</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setPaymentMethodType('googlepay')} style={{ marginRight: 8 }}>
-                  <Text style={{ color: paymentMethodType === 'googlepay' ? 'blue' : 'gray' }}>Google Pay</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setPaymentMethodType('local')}>
-                  <Text style={{ color: paymentMethodType === 'local' ? 'blue' : 'gray' }}>Local Method</Text>
-                </TouchableOpacity>
+                {availablePaymentOptions.map((option) => (
+                  <TouchableOpacity
+                    key={option.type}
+                    onPress={() => setPaymentMethodType(option.type)}
+                    style={{ marginRight: 8 }}
+                  >
+                    <Text style={{ color: paymentMethodType === option.type ? 'blue' : 'gray' }}>{option.label}</Text>
+                  </TouchableOpacity>
+                ))}
               </View>
+              {paymentMethodsLoading ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                  <ActivityIndicator size="small" color={COLORS.primary} />
+                  <Text style={{ marginLeft: 8, color: 'gray' }}>Loading saved methods...</Text>
+                </View>
+              ) : paymentMethods.length > 0 ? (
+                <View style={{ marginBottom: 12 }}>
+                  {paymentMethods.map((method, index) => {
+                    const methodId = method.id || method.paymentMethodId || method.reference || index;
+                    const descriptor = method.label
+                      || (method.brand ? `${method.brand} ending ${method.last4 || ''}` : method.reference || 'Saved payment method');
+                    return (
+                      <Text key={`${methodId}`} style={{ color: 'gray' }}>
+                        • {descriptor}
+                      </Text>
+                    );
+                  })}
+                </View>
+              ) : (
+                <Text style={{ color: 'gray', marginBottom: 12 }}>No saved payment methods yet.</Text>
+              )}
               {/* Payment method input fields and save button */}
               {/* ...existing payment method UI... */}
               <Button
-                title={paymentMethodSaved ? 'Payment Method Saved' : 'Save Payment Method'}
+                title={savingPaymentMethod ? 'Saving...' : paymentMethodSaved ? 'Payment Method Saved' : 'Save Payment Method'}
                 color={COLORS.primary}
                 onPress={handleSavePaymentMethod}
-                disabled={paymentMethodSaved || (paymentMethodType === 'card' && (!cardNumber || !cardExpiry || !cardCVC))}
+                disabled={
+                  savingPaymentMethod ||
+                  (paymentMethodType === 'card' && !cardDetails?.complete) ||
+                  (paymentMethodType === 'local' && !localReference)
+                }
               />
             </View>
             {/* Withdrawal fields */}
@@ -437,20 +790,27 @@ function PaymentScreen({ route }) {
             <Modal visible={showAccountModal} animationType="slide" onRequestClose={() => setShowAccountModal(false)}>
               <View style={{ flex: 1, backgroundColor: 'white', padding: 16 }}>
                 <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 16, color: 'blue' }}>Payment History</Text>
-                <ScrollView>
-                  {paymentHistory.length === 0 ? (
-                    <Text style={{ color: 'gray', marginTop: 32 }}>No payment history found.</Text>
-                  ) : (
-                    paymentHistory.map((item, idx) => (
-                      <View key={idx} style={{ marginBottom: 18, borderBottomWidth: 1, borderBottomColor: '#eee', paddingBottom: 8 }}>
-                        <Text style={{ fontWeight: 'bold', color: 'black' }}>Contract ID: {item.contractId || '-'}</Text>
-                        <Text style={{ color: 'black' }}>Amount: ${item.amount}</Text>
-                        <Text style={{ color: 'black' }}>Date: {new Date(item.createdAt).toLocaleString()}</Text>
-                        <Text style={{ color: item.status === 'paid' ? 'green' : 'orange', fontWeight: 'bold' }}>Status: {item.status}</Text>
-                      </View>
-                    ))
-                  )}
-                </ScrollView>
+                {paymentHistoryLoading ? (
+                  <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                    <ActivityIndicator size="small" color={COLORS.primary} />
+                    <Text style={{ color: 'gray', marginTop: 12 }}>Loading history...</Text>
+                  </View>
+                ) : (
+                  <ScrollView>
+                    {paymentHistory.length === 0 ? (
+                      <Text style={{ color: 'gray', marginTop: 32 }}>No payment history found.</Text>
+                    ) : (
+                      paymentHistory.map((item, idx) => (
+                        <View key={idx} style={{ marginBottom: 18, borderBottomWidth: 1, borderBottomColor: '#eee', paddingBottom: 8 }}>
+                          <Text style={{ fontWeight: 'bold', color: 'black' }}>Contract ID: {item.contractId || '-'}</Text>
+                          <Text style={{ color: 'black' }}>Amount: ${item.amount}</Text>
+                          <Text style={{ color: 'black' }}>Date: {new Date(item.createdAt).toLocaleString()}</Text>
+                          <Text style={{ color: item.status === 'paid' ? 'green' : 'orange', fontWeight: 'bold' }}>Status: {item.status}</Text>
+                        </View>
+                      ))
+                    )}
+                  </ScrollView>
+                )}
                 <Button title="Close" onPress={() => setShowAccountModal(false)} color={'blue'} />
               </View>
             </Modal>
@@ -467,30 +827,95 @@ function PaymentScreen({ route }) {
             {/* Payment method picker/input for contract deposit */}
             <Text style={{ marginTop: 12, fontWeight: 'bold', color: COLORS.primary }}>Select Payment Method</Text>
             <View style={{ flexDirection: 'row', marginBottom: 12 }}>
-              <TouchableOpacity onPress={() => setPaymentMethodType('card')} style={{ marginRight: 8 }}>
-                <Text style={{ color: paymentMethodType === 'card' ? 'blue' : 'gray' }}>Card</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setPaymentMethodType('applepay')} style={{ marginRight: 8 }}>
-                <Text style={{ color: paymentMethodType === 'applepay' ? 'blue' : 'gray' }}>Apple Pay</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setPaymentMethodType('googlepay')} style={{ marginRight: 8 }}>
-                <Text style={{ color: paymentMethodType === 'googlepay' ? 'blue' : 'gray' }}>Google Pay</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setPaymentMethodType('local')}>
-                <Text style={{ color: paymentMethodType === 'local' ? 'blue' : 'gray' }}>Local Method</Text>
-              </TouchableOpacity>
+              {availablePaymentOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.type}
+                  onPress={() => setPaymentMethodType(option.type)}
+                  style={{ marginRight: 8 }}
+                >
+                  <Text style={{ color: paymentMethodType === option.type ? 'blue' : 'gray' }}>{option.label}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
             {/* Payment method input fields for contract deposit only */}
-            {/* ...existing payment method UI for deposit... */}
-            <Button
-              title={loading ? 'Processing...' : 'Deposit Funds'}
-              onPress={handleDeposit}
-              disabled={loading || !cardDetails?.complete}
-            />
+            {paymentMethodType === 'card' && (
+              <>
+                <PaymentCardField
+                  postalCodeEnabled={true}
+                  placeholder={{ number: '4242 4242 4242 4242' }}
+                  cardStyle={{ backgroundColor: 'white', textColor: 'black' }}
+                  style={{ height: 50, marginVertical: 10 }}
+                  onCardChange={handleCardDetailsChange}
+                />
+                <Button
+                  title={loading ? 'Processing...' : 'Deposit Funds'}
+                  onPress={handleDeposit}
+                  disabled={loading || !cardDetails?.complete}
+                />
+              </>
+            )}
+
+            {isApplePayAvailable && paymentMethodType === 'applepay' && (
+              <>
+                <Text style={{ color: 'gray', marginBottom: 8 }}>Apple Pay will be used at checkout.</Text>
+                <Button
+                  title={loading ? 'Processing...' : 'Deposit with Apple Pay'}
+                  onPress={handleApplePay}
+                  disabled={loading}
+                />
+              </>
+            )}
+
+            {isGooglePayAvailable && paymentMethodType === 'googlepay' && (
+              <>
+                <Text style={{ color: 'gray', marginBottom: 8 }}>Google Pay will be used at checkout.</Text>
+                <Button
+                  title={loading ? 'Processing...' : 'Deposit with Google Pay'}
+                  onPress={handleGooglePay}
+                  disabled={loading}
+                />
+              </>
+            )}
+
+            {paymentMethodType === 'local' && (
+              <>
+                <Text style={{ color: 'gray', marginBottom: 8 }}>Provide the reference ID from your local transfer.</Text>
+                <TextInput
+                  style={{ borderWidth: 1, borderColor: 'gray', borderRadius: 6, padding: 8, width: '100%', marginBottom: 8, color: 'black' }}
+                  placeholder="Reference Number"
+                  value={localReference}
+                  onChangeText={handleLocalReferenceChange}
+                />
+                <Button
+                  title={loading ? 'Processing...' : 'Submit Local Payment'}
+                  onPress={handleLocalPay}
+                  disabled={loading || !localReference}
+                />
+              </>
+            )}
+
+            {escrowed && (
+              <View style={{ marginTop: 16 }}>
+                <Button
+                  title={loading ? 'Processing...' : 'Release Funds'}
+                  onPress={handleReleaseFunds}
+                  disabled={loading}
+                  color={'green'}
+                />
+              </View>
+            )}
           </View>
         )}
       </View>
-    </StripeProvider>
+    </>
+  );
+}
+function PaymentScreen({ route }) {
+  const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY || '';
+  return (
+    <PaymentStripeProvider publishableKey={publishableKey}>
+      <PaymentScreenContent route={route} publishableKey={publishableKey} />
+    </PaymentStripeProvider>
   );
 }
 

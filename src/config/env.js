@@ -41,7 +41,19 @@ const sanitizeApiBaseUrl = (value) => {
 const FALLBACK_API_BASE_URL = 'https://api.ai-escrowassistant.com';
 const LOCAL_DEV_API_BASE_URL = 'http://localhost:4000';
 
+const getHostname = (value) => {
+  if (!value) {
+    return null;
+  }
+  try {
+    return new URL(value).hostname.toLowerCase();
+  } catch (_error) {
+    return null;
+  }
+};
+
 const sanitizedEnvValue = sanitizeApiBaseUrl(resolvedApiBaseUrl);
+const sanitizedLocalValue = sanitizeApiBaseUrl(LOCAL_DEV_API_BASE_URL) || LOCAL_DEV_API_BASE_URL;
 
 const preferLocalApiByDefault = (() => {
   if (runtimeEnv.EXPO_PUBLIC_FORCE_REMOTE_API === 'true') {
@@ -58,8 +70,14 @@ const preferLocalApiByDefault = (() => {
 
 let sanitizedApiBaseUrl = sanitizedEnvValue;
 if (!sanitizedApiBaseUrl) {
-  const fallbackTarget = preferLocalApiByDefault ? LOCAL_DEV_API_BASE_URL : FALLBACK_API_BASE_URL;
+  const fallbackTarget = preferLocalApiByDefault ? sanitizedLocalValue : FALLBACK_API_BASE_URL;
   sanitizedApiBaseUrl = sanitizeApiBaseUrl(fallbackTarget) || fallbackTarget;
+} else if (preferLocalApiByDefault) {
+  const envHostname = getHostname(sanitizedEnvValue);
+  const isAlreadyLocal = envHostname === 'localhost' || envHostname === '127.0.0.1';
+  if (!isAlreadyLocal) {
+    sanitizedApiBaseUrl = sanitizedLocalValue;
+  }
 } else {
   try {
     const { hostname } = new URL(sanitizedApiBaseUrl);

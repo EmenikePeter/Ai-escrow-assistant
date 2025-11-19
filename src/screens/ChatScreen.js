@@ -1,4 +1,3 @@
-import { API_BASE_URL } from '@env';
 import { useEvent } from 'expo';
 import {
   RecordingPresets,
@@ -28,6 +27,7 @@ import {
 } from 'react-native';
 import { io } from 'socket.io-client';
 import BackButton from '../../components/BackButton';
+import { API_BASE_URL } from '../config/env';
 import { COLORS } from '../constants/Theme';
 import { useUser } from '../context/UserContext';
 import { getWithAuth, postWithAuth } from '../utils/api';

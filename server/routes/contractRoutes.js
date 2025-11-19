@@ -194,7 +194,17 @@ router.get('/received', auth, async (req, res) => {
     if (req.user && req.user.email) {
       const receivedQuery = {
         $and: [
-          { 'recipient.email': req.user.email },
+          {
+            $or: [
+              { 'recipient.email': req.user.email },
+              {
+                $and: [
+                  { 'originator.email': req.user.email },
+                  { status: 'signed' }
+                ]
+              }
+            ]
+          },
           { status: { $in: ['sent', 'signed'] } }
         ]
       };
@@ -209,6 +219,26 @@ router.get('/received', auth, async (req, res) => {
     res.json({ contracts });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch received contracts.' });
+  }
+});
+
+router.get('/:id', auth, async (req, res) => {
+  try {
+    const contract = await Contract.findById(req.params.id);
+    if (!contract) {
+      return res.status(404).json({ error: 'Contract not found.' });
+    }
+
+    const requesterEmail = req.user?.email?.toLowerCase();
+    const originatorEmail = contract.originator?.email?.toLowerCase();
+    const recipientEmail = contract.recipient?.email?.toLowerCase();
+    if (!requesterEmail || (requesterEmail !== originatorEmail && requesterEmail !== recipientEmail)) {
+      return res.status(403).json({ error: 'Not authorized to view this contract.' });
+    }
+
+    res.json({ contract });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch contract.', details: err?.message || err });
   }
 });
 

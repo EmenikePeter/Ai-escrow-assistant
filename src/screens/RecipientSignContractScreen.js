@@ -1,6 +1,6 @@
 import { Picker } from '@react-native-picker/picker';
 import { useState } from 'react';
-import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, ScrollView, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import BackButton from '../../components/BackButton';
 import { useUser } from '../context/UserContext';
 import { postWithAuth } from '../utils/api';
@@ -22,6 +22,8 @@ export default function RecipientSignContractScreen({ route, navigation }) {
   const [role, setRole] = useState('client');
   const [signature, setSignature] = useState('');
   const [loading, setLoading] = useState(false);
+  const { height: windowHeight } = useWindowDimensions();
+  const webScrollHeight = Platform.OS === 'web' ? Math.max(windowHeight - 120, 360) : undefined;
 
   if (!contract) {
     return (
@@ -45,8 +47,21 @@ export default function RecipientSignContractScreen({ route, navigation }) {
         action: actionType,
       };
       await postWithAuth(`${process.env.API_BASE_URL}/api/contracts/sign`, contractData);
-      Alert.alert('Success', `Contract ${actionType === 'accept' ? 'signed and sent to originator' : 'declined'}.`);
-      navigation.goBack();
+      const successMessage = actionType === 'accept'
+        ? 'Contract signed and sent to originator.'
+        : 'Contract declined.';
+      Alert.alert('Success', successMessage, [
+        {
+          text: 'OK',
+          onPress: () => {
+            if (actionType === 'accept') {
+              navigation.navigate('Dashboard');
+            } else {
+              navigation.goBack();
+            }
+          },
+        },
+      ]);
     } catch (err) {
       Alert.alert('Error', `Failed to ${actionType === 'accept' ? 'sign and send' : 'decline'} contract.`);
     }
@@ -54,54 +69,95 @@ export default function RecipientSignContractScreen({ route, navigation }) {
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: '#fff', ...(Platform.OS === 'web' ? { minHeight: '100vh' } : {}) }}>
       <BackButton />
-      <ScrollView style={{ flex: 1, backgroundColor: '#fff' }} contentContainerStyle={{ padding: 16 }}>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: '#fff', ...(webScrollHeight ? { height: webScrollHeight, maxHeight: webScrollHeight } : {}) }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 120, flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        showsVerticalScrollIndicator
+      >
         <Text style={{ fontSize: 22, fontWeight: 'bold', marginBottom: 16 }}>Sign Contract (Recipient)</Text>
 
         {/* Contract Preview Section */}
         <Text style={{ fontWeight: 'bold', fontSize: 18, color: '#0057FF', textAlign: 'center', marginVertical: 20 }}>
           Contract Preview
         </Text>
-        <Text style={{ fontWeight: 'bold', fontSize: 16 }}>Party 1 (Originator):</Text>
-        <Text>Name: {contract.originator?.name}</Text>
-        <Text>Email: {contract.originator?.email}</Text>
-        <Text>UUID: {contract.originator?.uuid}</Text>
-          <Text>Role: {contract.originator?.role}</Text>
-          {/* Show signature below role if present */}
-          {contract.signatures && contract.signatures.length > 0 && (
-            <Text>Signature: {contract.signatures.find(s => s.email === contract.originator.email)?.signature || 'Not signed yet'}</Text>
+        <View style={{ marginBottom: 12 }}>
+          <Text style={{ fontWeight: 'bold', fontSize: 16 }}>Party 1 (Originator):</Text>
+          <Text>Name: {contract.originator?.name}</Text>
+          <Text>Email: {contract.originator?.email}</Text>
+          <Text>UUID: {contract.originator?.uuid}</Text>
+          <Text>Role: {contract.originator?.role || 'N/A'}</Text>
+        </View>
+
+        <View style={{ marginBottom: 12 }}>
+          <Text style={{ fontWeight: 'bold', fontSize: 16, marginTop: 10 }}>Party 2 (Recipient):</Text>
+          <Text>Name: {contract.recipient?.name}</Text>
+          <Text>Email: {contract.recipient?.email}</Text>
+          <Text>UUID: {contract.recipient?.uuid}</Text>
+          <Text>Role: {contract.recipient?.role || 'N/A'}</Text>
+        </View>
+
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ fontWeight: 'bold', fontSize: 16, marginTop: 10 }}>Contract Details:</Text>
+          <Text>Title: {contract.title || 'N/A'}</Text>
+          <Text>Description: {contract.description || 'N/A'}</Text>
+          <Text>Amount: {typeof contract.amount === 'number' ? `$${contract.amount}` : contract.amount || 'N/A'}</Text>
+          <Text>Deadline: {contract.deadline || 'N/A'}</Text>
+          <Text>Status: {contract.status || 'N/A'}</Text>
+          <Text>Created At: {contract.createdAt ? new Date(contract.createdAt).toLocaleString() : 'N/A'}</Text>
+          <Text>Updated At: {contract.updatedAt ? new Date(contract.updatedAt).toLocaleString() : 'N/A'}</Text>
+        </View>
+
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ fontWeight: 'bold', fontSize: 16 }}>Clauses:</Text>
+          {Array.isArray(contract.clauses) && contract.clauses.length > 0 ? (
+            contract.clauses.map((clause, idx) => (
+              <Text key={`clause-${idx}`} style={{ marginLeft: 10 }}>• {clause}</Text>
+            ))
+          ) : (
+            <Text style={{ marginLeft: 10 }}>No clauses specified.</Text>
           )}
-        {contract.signatures?.originator && (
-          <Text>Signature: {contract.signatures.originator}</Text>
-        )}
-        <Text style={{ fontWeight: 'bold', fontSize: 16, marginTop: 10 }}>Party 2 (Recipient):</Text>
-        <Text>Name: {contract.recipient?.name}</Text>
-        <Text>Email: {contract.recipient?.email}</Text>
-        <Text>UUID: {contract.recipient?.uuid}</Text>
-        {/* Show recipient's selected role from signatures array */}
-        {contract.signatures && contract.signatures.length > 0 && (
-          <Text>Role: {contract.signatures.find(s => s.email === contract.recipient.email)?.role || 'Not selected'}</Text>
-        )}
-        {/* Show recipient's signature */}
-        {contract.signatures && contract.signatures.length > 0 && (
-          <Text>Signature: {contract.signatures.find(s => s.email === contract.recipient.email)?.signature || 'Not signed yet'}</Text>
-        )}
-        <Text style={{ fontWeight: 'bold', fontSize: 16, marginTop: 10 }}>Contract Details:</Text>
-        <Text>Title: {contract.title}</Text>
-        <Text>Description: {contract.description}</Text>
-        <Text>Amount: ${contract.amount}</Text>
-        <Text>Deadline: {contract.deadline}</Text>
-        <Text>Clauses:</Text>
-        {contract.clauses && contract.clauses.length > 0 ? (
-          contract.clauses.map((clause, idx) => (
-            <Text key={idx} style={{ marginLeft: 10 }}>• {clause}</Text>
-          ))
-        ) : (
-          <Text style={{ marginLeft: 10 }}>No clauses specified.</Text>
-        )}
-        <Text>Dispute Clause:</Text>
-        <Text style={{ color: 'red', marginLeft: 10 }}>{contract.disputeClause ? contract.disputeClause : 'None specified.'}</Text>
+          <Text style={{ marginTop: 8 }}>Dispute Clause:</Text>
+          <Text style={{ marginLeft: 10, color: contract.disputeClause ? 'red' : '#333' }}>
+            {contract.disputeClause || 'None provided.'}
+          </Text>
+        </View>
+
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ fontWeight: 'bold', fontSize: 16 }}>Penalties:</Text>
+          {Array.isArray(contract.penalties) && contract.penalties.length > 0 ? (
+            contract.penalties.map((penalty, idx) => (
+              <Text key={`penalty-${idx}`} style={{ marginLeft: 10 }}>• {typeof penalty === 'string' ? penalty : JSON.stringify(penalty)}</Text>
+            ))
+          ) : (
+            <Text style={{ marginLeft: 10 }}>No penalties listed.</Text>
+          )}
+        </View>
+
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ fontWeight: 'bold', fontSize: 16 }}>Milestones:</Text>
+          {Array.isArray(contract.milestones) && contract.milestones.length > 0 ? (
+            contract.milestones.map((milestone, idx) => (
+              <Text key={`milestone-${idx}`} style={{ marginLeft: 10 }}>• {typeof milestone === 'string' ? milestone : JSON.stringify(milestone)}</Text>
+            ))
+          ) : (
+            <Text style={{ marginLeft: 10 }}>No milestones listed.</Text>
+          )}
+        </View>
+
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ fontWeight: 'bold', fontSize: 16 }}>Inspection Requirements:</Text>
+          {Array.isArray(contract.inspectionRequirements) && contract.inspectionRequirements.length > 0 ? (
+            contract.inspectionRequirements.map((item, idx) => (
+              <Text key={`inspection-${idx}`} style={{ marginLeft: 10 }}>• {item}</Text>
+            ))
+          ) : (
+            <Text style={{ marginLeft: 10 }}>No inspection requirements specified.</Text>
+          )}
+        </View>
 
         {/* Signing UI */}
         <Text style={{ marginBottom: 8, marginTop: 24 }}>Select your role for this contract:</Text>
@@ -120,7 +176,7 @@ export default function RecipientSignContractScreen({ route, navigation }) {
           onChangeText={setSignature}
           style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12, marginBottom: 16 }}
         />
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, marginBottom: 24 }}>
           <TouchableOpacity
             style={{ flex: 1, marginRight: 8, backgroundColor: '#2979FF', borderRadius: 6, padding: 12 }}
             onPress={() => handleSign('accept')}

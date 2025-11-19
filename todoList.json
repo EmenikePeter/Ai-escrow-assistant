@@ -1,0 +1,14 @@
+[ 
+	{
+		"id": 1,
+		"title": "Simplify EditContractScreen scroll layout",
+		"description": "Remove extra web-specific height/minHeight constraints and flatten structure so ScrollView can overflow-scroll.",
+		"status": "in-progress"
+	},
+	{
+		"id": 2,
+		"title": "Verify scrolling on Preview and Dashboard screens",
+		"description": "Double-check other contract screens for similar constraints once EditContractScreen scroll works.",
+		"status": "not-started"
+	}
+]
