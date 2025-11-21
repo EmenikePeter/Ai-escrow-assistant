@@ -76,17 +76,34 @@ app.use(express.json());
 app.use(cookieParser());
 
 // CORS configuration to allow requests from Vercel and other trusted origins
-const allowedOrigins = [
+const normalizeOrigin = (value) => {
+  if (!value) {
+    return '';
+  }
+  const trimmed = value.trim();
+  try {
+    return new URL(trimmed).origin.toLowerCase();
+  } catch (_error) {
+    return trimmed.replace(/\/+$/, '').toLowerCase();
+  }
+};
+
+const rawAllowedOrigins = [
   'http://localhost:3000',
   'http://localhost:19006',
   'http://localhost:8081',
   'http://localhost:5173',
   'https://ec2-3-211-217-228.compute-1.amazonaws.com:4000',
   'https://ai-escrow-assistant.vercel.app',
+  'https://www.ai-escrowassistant.com',
+  'https://escrowassistant.com',
   process.env.FRONTEND_URL,
   process.env.ADMIN_FRONTEND_URL,
   process.env.EXTRA_FRONTEND_URL,
 ].filter(Boolean);
+
+const allowedOriginSet = new Set(rawAllowedOrigins.map(normalizeOrigin));
+console.log('[CORS] Allowed origins:', Array.from(allowedOriginSet));
 
 const dynamicOriginPatterns = [
   /^https:\/\/ai-escrow-assistant-[a-z0-9-]+-anekwe-emenike-peter-s-projects\.vercel\.app$/,
@@ -107,23 +124,18 @@ const isOriginAllowed = (origin) => {
     return true;
   }
 
-  if (allowedOrigins.includes(origin)) {
+  const normalizedOrigin = normalizeOrigin(origin);
+  const hasOrigin = allowedOriginSet.has(normalizedOrigin);
+  console.log(`[CORS] Check origin: ${origin} -> ${normalizedOrigin} | inSet=${hasOrigin}`);
+  if (hasOrigin) {
     return true;
   }
 
-  if (matchesDynamicOrigin(origin)) {
+  if (matchesDynamicOrigin(origin) || matchesDynamicOrigin(normalizedOrigin)) {
     return true;
   }
 
-  try {
-    const normalizedOrigin = new URL(origin).origin;
-    if (allowedOrigins.includes(normalizedOrigin)) {
-      return true;
-    }
-    return matchesDynamicOrigin(normalizedOrigin);
-  } catch (_error) {
-    return false;
-  }
+  return false;
 };
 
 const corsOptions = {
