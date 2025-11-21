@@ -80,19 +80,15 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:19006',
   'http://localhost:8081',
-  'https://ai-escrowassistant.com',
-  'https://www.ai-escrowassistant.com',
-  'https://ai-escroassistant.com',
-  'https://www.ai-escroassistant.com',
-  'https://escroassistant.com',
-  'https://www.escroassistant.com',
+  'http://localhost:5173',
+  'https://ec2-3-211-217-228.compute-1.amazonaws.com:4000',
   'https://ai-escrow-assistant.vercel.app',
   process.env.FRONTEND_URL,
   process.env.ADMIN_FRONTEND_URL,
   process.env.EXTRA_FRONTEND_URL,
-].filter(Boolean); // Remove undefined values
+].filter(Boolean);
 
-const dynamicOriginPatterns = [,
+const dynamicOriginPatterns = [
   /^https:\/\/ai-escrow-assistant-[a-z0-9-]+-anekwe-emenike-peter-s-projects\.vercel\.app$/,
 ];
 
